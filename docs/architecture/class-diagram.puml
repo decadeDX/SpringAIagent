@@ -1,0 +1,267 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+hide empty members
+
+skinparam package {
+  BackgroundColor #f8f9fa
+}
+
+skinparam enum {
+  BackgroundColor #eef5ff
+}
+
+' =========================================================
+' 领域实体（MySQL）
+' =========================================================
+
+package "领域实体（MySQL）" {
+
+  class SysUser {
+    +Long id
+    +String username
+    +String passwordHash
+    +Role role
+    +TrainingStatus trainingStatus
+  }
+
+  note right of SysUser
+    持久化映射表：sys_user
+    Entity 仅用于 MyBatis-Plus 持久化
+    HTTP 使用 DTO / VO / Result<T>
+  end note
+
+  class Lab {
+    +String id
+    +String name
+    +int capacity
+    +String equipmentDescription
+    +LocalTime openTime
+    +LocalTime closeTime
+    +LabStatus status
+  }
+
+  class Reservation {
+    +Long id
+    +Long userId
+    +String labId
+    +OffsetDateTime startTime
+    +OffsetDateTime endTime
+    +int participantCount
+    +ReservationStatus status
+  }
+
+  class ReservationSlot {
+    +Long id
+    +String labId
+    +LocalDateTime slotStartTime
+    +Long reservationId
+  }
+
+  class RepairTicket {
+    +Long id
+    +Long userId
+    +String labId
+    +String equipmentInfo
+    +String description
+    +boolean safetyRisk
+    +TicketStatus status
+    +String resolutionNote
+  }
+
+  class KnowledgeDocument {
+    +Long id
+    +String logicalDocumentCode
+    +String title
+    +String version
+    +LocalDate effectiveDate
+    +String applicableLabs
+    +DocumentStatus status
+    +IndexStatus indexStatus
+  }
+
+  class KnowledgeChunk {
+    +Long id
+    +Long documentId
+    +int sequenceNo
+    +String content
+    +String vectorRecordId
+  }
+
+  class ActionExecution {
+    +UUID actionId
+    +Long userId
+    +ActionType actionType
+    +ActionStatus status
+    +String payloadJson
+    +String businessId
+    +String resultSummary
+  }
+
+  class AgentTrace {
+    +Long id
+    +String requestId
+    +String sessionId
+    +Long userId
+    +String toolName
+    +String maskedArguments
+    +String resultSummary
+    +long durationMs
+    +String errorCode
+  }
+
+
+  ' =======================================================
+  ' 枚举定义
+  ' =======================================================
+
+  enum Role {
+    STUDENT
+    ADMIN
+  }
+
+  enum TrainingStatus {
+    PASSED
+    NOT_PASSED
+    NOT_REQUIRED
+  }
+
+  enum LabStatus {
+    AVAILABLE
+    MAINTENANCE
+  }
+
+  enum ReservationStatus {
+    CONFIRMED
+    CANCELLED
+  }
+
+  enum TicketStatus {
+    SUBMITTED
+    PROCESSING
+    RESOLVED
+  }
+
+  enum DocumentStatus {
+    DRAFT
+    PUBLISHED
+    DISABLED
+  }
+
+  enum IndexStatus {
+    PENDING
+    INDEXING
+    SUCCEEDED
+    FAILED
+  }
+
+  enum ActionType {
+    CREATE_RESERVATION
+    CANCEL_RESERVATION
+    CREATE_REPAIR_TICKET
+  }
+
+  enum ActionStatus {
+    PENDING
+    EXECUTING
+    SUCCEEDED
+    FAILED
+    EXPIRED
+  }
+}
+
+
+' =========================================================
+' 应用服务
+' =========================================================
+
+package "应用服务" {
+
+  class AuthService
+
+  class LabService
+
+  class ReservationService
+
+  class RepairTicketService
+
+  class KnowledgeService
+
+  class RagService
+
+  class AgentOrchestrationService
+
+  class ActionConfirmationService
+
+  class ChatSessionService
+}
+
+
+' =========================================================
+' 实体关联关系
+' =========================================================
+
+SysUser "1" -- "0..*" Reservation : creates >
+
+Lab "1" -- "0..*" Reservation : reserved for >
+
+' ReservationSlot 是实验室时段记录
+' 不随着 Reservation 删除，因此这里使用普通关联
+Reservation "1" -- "0..3" ReservationSlot : occupies >
+
+SysUser "1" -- "0..*" RepairTicket : submits >
+
+Lab "1" -- "0..*" RepairTicket : reported in >
+
+' KnowledgeChunk 从属于 KnowledgeDocument
+KnowledgeDocument "1" *-- "1..*" KnowledgeChunk : splits into >
+
+SysUser "1" -- "0..*" ActionExecution : owns >
+
+SysUser "1" -- "0..*" AgentTrace : triggers >
+
+ActionExecution "1" -- "0..*" AgentTrace : logs >
+
+
+' =========================================================
+' 服务依赖关系
+' =========================================================
+
+ReservationService ..> ReservationSlot : transactionally writes
+
+ReservationService ..> LabService : validates
+
+RepairTicketService ..> LabService : validates lab
+
+KnowledgeService ..> KnowledgeChunk : indexes/versions
+
+RagService ..> KnowledgeService : retrieves valid chunks
+
+
+' =========================================================
+' Agent 编排关系
+' =========================================================
+
+AgentOrchestrationService ..> RagService : searchKnowledge
+
+AgentOrchestrationService ..> ReservationService : prepare only
+
+AgentOrchestrationService ..> RepairTicketService : prepare only
+
+AgentOrchestrationService ..> ChatSessionService : stores context
+
+AgentOrchestrationService ..> ActionConfirmationService : delegate action
+
+
+' =========================================================
+' Action Confirmation
+' =========================================================
+
+ActionConfirmationService ..> ActionExecution : idempotency record
+
+ActionConfirmationService ..> ReservationService : executes after recheck
+
+ActionConfirmationService ..> RepairTicketService : executes after recheck
+
+
+@enduml
