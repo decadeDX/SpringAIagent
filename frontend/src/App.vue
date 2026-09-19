@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { computed, ref } from 'vue'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
+const router = useRouter()
 const isLoginPage = computed(() => route.name === 'login')
 const isAdminArea = computed(() => route.meta.area === 'admin')
 const username = computed(() => localStorage.getItem('username') ?? '当前用户')
 const role = computed(() => localStorage.getItem('userRole') ?? 'STUDENT')
 const trainingStatus = computed(() => localStorage.getItem('trainingStatus') ?? 'PENDING')
+const accountMenuOpen = ref(false)
 
 const studentNavigation = [
   { name: 'assistant', label: '智能助手', icon: '✦' },
@@ -21,6 +23,15 @@ const adminNavigation = [
 
 const navigation = computed(() => isAdminArea.value ? adminNavigation : studentNavigation)
 const accountDescription = computed(() => role.value === 'ADMIN' ? '管理员账户' : trainingStatus.value === 'PASSED' ? '已通过安全培训' : '未通过安全培训')
+
+function logout() {
+  localStorage.removeItem('accessToken')
+  localStorage.removeItem('username')
+  localStorage.removeItem('userRole')
+  localStorage.removeItem('trainingStatus')
+  accountMenuOpen.value = false
+  router.push({ name: 'login' })
+}
 </script>
 
 <template>
@@ -45,16 +56,23 @@ const accountDescription = computed(() => role.value === 'ADMIN' ? '管理员账
         </RouterLink>
       </nav>
 
-      <div class="current-user">
-        <span class="avatar">{{ username.slice(0, 1).toUpperCase() }}</span>
-        <span>
-          <strong>{{ username }}</strong>
-          <small>{{ accountDescription }}</small>
-        </span>
-      </div>
     </aside>
 
     <main class="page-content">
+      <header class="topbar">
+        <span>{{ isAdminArea ? '管理后台' : '学生服务' }}</span>
+        <div class="account-menu">
+          <button class="account-trigger" @click="accountMenuOpen = !accountMenuOpen">
+            <span class="avatar">{{ username.slice(0, 1).toUpperCase() }}</span>
+            <span>{{ username }}</span>
+          </button>
+          <div v-if="accountMenuOpen" class="account-dropdown">
+            <strong>{{ username }}</strong>
+            <small>{{ accountDescription }}</small>
+            <button class="text-button" @click="logout">退出登录</button>
+          </div>
+        </div>
+      </header>
       <RouterView />
     </main>
   </div>
