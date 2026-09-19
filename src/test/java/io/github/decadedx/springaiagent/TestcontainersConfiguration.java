@@ -8,7 +8,10 @@ import org.testcontainers.mysql.MySQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
-class TestcontainersConfiguration {
+/**
+ * 为需要真实 MySQL 与 Redis 的集成测试提供隔离容器依赖。
+ */
+public class TestcontainersConfiguration {
 
     @Bean
     @ServiceConnection

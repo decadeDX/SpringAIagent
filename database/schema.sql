@@ -7,3 +7,4 @@ USE lab_agent;
 -- Flyway 的应用迁移位于 src/main/resources/db/migration/V1__schema.sql。
 -- 本文件与该迁移保持相同的表定义，供空 MySQL 实例的首次建库使用。
 SOURCE src/main/resources/db/migration/V1__schema.sql;
+SOURCE src/main/resources/db/migration/V2__seed_sys_users.sql;
