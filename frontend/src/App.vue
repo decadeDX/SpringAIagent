@@ -4,13 +4,23 @@ import { RouterLink, RouterView, useRoute } from 'vue-router'
 
 const route = useRoute()
 const isLoginPage = computed(() => route.name === 'login')
+const isAdminArea = computed(() => route.meta.area === 'admin')
+const username = computed(() => localStorage.getItem('username') ?? '当前用户')
+const role = computed(() => localStorage.getItem('userRole') ?? 'STUDENT')
+const trainingStatus = computed(() => localStorage.getItem('trainingStatus') ?? 'PENDING')
 
-const navigation = [
+const studentNavigation = [
   { name: 'assistant', label: '智能助手', icon: '✦' },
   { name: 'reservations', label: '我的预约', icon: '▣' },
   { name: 'repairs', label: '我的报修', icon: '⌁' },
+]
+
+const adminNavigation = [
   { name: 'admin', label: '管理中心', icon: '⌘' },
 ]
+
+const navigation = computed(() => isAdminArea.value ? adminNavigation : studentNavigation)
+const accountDescription = computed(() => role.value === 'ADMIN' ? '管理员账户' : trainingStatus.value === 'PASSED' ? '已通过安全培训' : '未通过安全培训')
 </script>
 
 <template>
@@ -18,9 +28,9 @@ const navigation = [
 
   <div v-else class="app-shell">
     <aside class="sidebar">
-      <RouterLink class="brand" :to="{ name: 'assistant' }">
+      <RouterLink class="brand" :to="{ name: isAdminArea ? 'admin' : 'assistant' }">
         <span class="brand-mark">L</span>
-        <span>Lab Assistant</span>
+        <span>{{ isAdminArea ? '管理后台' : 'Lab Assistant' }}</span>
       </RouterLink>
 
       <nav aria-label="主导航">
@@ -36,10 +46,10 @@ const navigation = [
       </nav>
 
       <div class="current-user">
-        <span class="avatar">S</span>
+        <span class="avatar">{{ username.slice(0, 1).toUpperCase() }}</span>
         <span>
-          <strong>student01</strong>
-          <small>已通过安全培训</small>
+          <strong>{{ username }}</strong>
+          <small>{{ accountDescription }}</small>
         </span>
       </div>
     </aside>

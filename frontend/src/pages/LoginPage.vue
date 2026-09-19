@@ -15,8 +15,10 @@ async function submit() {
   try {
     const result = await login(username.value, password.value)
     localStorage.setItem('accessToken', result.accessToken)
-    localStorage.setItem('userRole', result.role)
-    await router.push({ name: result.role === 'ADMIN' ? 'admin' : 'assistant' })
+    localStorage.setItem('username', result.user.username)
+    localStorage.setItem('userRole', result.user.role)
+    localStorage.setItem('trainingStatus', result.user.trainingStatus)
+    await router.push({ name: result.user.role === 'ADMIN' ? 'admin' : 'assistant' })
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '登录失败，请稍后重试'
   } finally {
