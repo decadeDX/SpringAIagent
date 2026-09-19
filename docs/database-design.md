@@ -1,4 +1,4 @@
-# 数据库设计建议（MySQL + MyBatis-Plus）
+# 最终数据库设计（MySQL + MyBatis-Plus）
 
 ## 选型
 
@@ -15,12 +15,18 @@
 | `reservation` | `id`、`user_id`、`lab_id`、开始/结束时刻、人数、状态 | `idx_reservation_user_status_end(user_id,status,end_time)`、`idx_reservation_lab_start(lab_id,start_time)` |
 | `reservation_slot` | `id`、`lab_id`、`slot_start_time`、`reservation_id` | **`uk_lab_slot(lab_id,slot_start_time)`**、`idx_slot_reservation(reservation_id)` |
 | `repair_ticket` | `id`、`user_id`、`lab_id`、设备、描述、安全风险、状态、处理说明、处理人、`version` | `idx_ticket_user_created(user_id,created_at)`、`idx_ticket_status_created(status,created_at)` |
-| `knowledge_document` | `id`、逻辑文档号、版本、标题、生效时间、适用实验室、发布/索引状态、源文件、失败原因 | `uk_document_version(logical_document_code,version)`、`idx_document_retrieval(status,index_status)` |
+| `knowledge_document` | `id`、逻辑文档号、版本、标题、生效时间、适用实验室、`publish_status`/`index_status`、源文件、失败原因 | `uk_document_version(logical_document_code,version)`、`idx_document_retrieval(publish_status,index_status)` |
 | `knowledge_chunk` | `id`、`document_id`、序号、正文、摘要、向量记录 ID、内容摘要 hash | `uk_chunk_sequence(document_id,sequence_no)`、`idx_chunk_document(document_id)` |
 | `action_execution` | `action_id CHAR(36)`、用户、会话、动作类型、状态、payload、业务编号、结果摘要 | 主键/唯一 `action_id`，`idx_action_user(user_id)` |
 | `agent_trace` | `id`、requestId、sessionId、userId、工具名、脱敏参数、结果摘要、耗时、错误码 | `idx_trace_request(request_id)`、`idx_trace_user_session(user_id,session_id)` |
 
 `knowledge_document` 的同一逻辑文档最多只能有一个 `PUBLISHED` 版本；这不能由普通联合唯一键直接表达，应在发布事务中锁定该逻辑文档的版本记录，先停用旧版本、再发布新版本，并同步更新向量库检索过滤条件。
+
+## 构建与迁移
+
+最终表定义位于 [Flyway V1 迁移](../src/main/resources/db/migration/V1__schema.sql)。应用启动时由 Flyway 执行该迁移；连接信息仅从 `DB_HOST`、`DB_PORT`、`DB_NAME`、`DB_USERNAME`、`DB_PASSWORD` 环境变量读取，连接会话固定为 UTC。
+
+首次创建空 MySQL 实例可在仓库根目录执行 `mysql -u root -p < database/schema.sql`。该入口脚本创建 `lab_agent` 数据库后加载同一份 V1 定义；不要在已有数据库上重复执行，后续结构变化必须新增 Flyway 迁移，不能修改 V1。
 
 ## 预约事务与 SQL 要点
 

@@ -8,7 +8,7 @@
 
 | 模块 | 结论 | 必须落实的修订 |
 |---|---|---|
-| 01 基础认证 | 可实施 | 采用 Spring Security，密码用 BCrypt；所有业务身份只从认证上下文取得。明确使用 Spring Boot 4.1.x、JDK 21、MyBatis-Plus Boot 4 starter。 |
+| 01 基础认证 | 可实施 | 采用 Spring Security，密码用 BCrypt；所有业务身份只从认证上下文取得。明确使用 Spring Boot 4.1.x、JDK 17、MyBatis-Plus Boot 4 starter。 |
 | 02 实验室预约 | 可实施 | `reservation_slot` 的唯一键是最终并发保障；MyBatis-Plus 的乐观锁不能替代它。用户预约上限检查须用用户行锁或等价串行化。 |
 | 03 报修 | 可实施 | 状态只能相邻流转，处理说明必填；报修不自动修改实验室状态。 |
 | 04 知识库 RAG | 可实施 | MySQL 仅保存文档元数据和分块正文；向量放 Redis Stack 或 PGVector。检索必须限定已发布、索引成功的文档版本。 |
@@ -19,7 +19,7 @@
 
 ## Spring Boot + MyBatis-Plus 基线
 
-推荐 JDK 21、Spring Boot 4.1.x、MyBatis-Plus 3.5.17、MySQL 8.4 LTS、Redis 7 + Redis Stack（如选择 Redis 向量库）。MyBatis-Plus 官方已提供 Spring Boot 4 starter；Spring Boot 4.1.1 支持 Java 17 至 26，因此 JDK 21 是稳定且易部署的选择。[MyBatis-Plus 安装说明](https://baomidou.com/en/getting-started/install/) [Spring Boot 系统要求](https://docs.spring.io/spring-boot/system-requirements.html)
+使用 JDK 17、Spring Boot 4.1.x、MyBatis-Plus 3.5.17、MySQL 8.4 LTS、Redis 7 + Redis Stack（如选择 Redis 向量库）。MyBatis-Plus 官方已提供 Spring Boot 4 starter；Spring Boot 4.1.1 支持 Java 17 至 26，因此项目以现有 JDK 17 作为统一基线。[MyBatis-Plus 安装说明](https://baomidou.com/en/getting-started/install/) [Spring Boot 系统要求](https://docs.spring.io/spring-boot/system-requirements.html)
 
 使用 `mybatis-plus-spring-boot4-starter`，不要再同时引入普通 MyBatis starter。`BaseMapper<T>` 仅用于单表 CRUD；以下查询必须使用 XML 或注解 SQL，保持 SQL 可见并可压测：
 

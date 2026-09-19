@@ -1,0 +1,874 @@
+openapi: 3.1.0
+info:
+  title: 实验室智能助手 API
+  version: 1.0.0
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+  description: |
+    业务 API 的唯一机器可读契约。除登录和健康检查外，所有接口要求 Bearer Token。
+    时间字段必须是带时区偏移的 ISO-8601 字符串；服务端持久化时转换为 UTC。
+servers:
+  - url: /api
+security:
+  - bearerAuth: []
+tags:
+  - name: Authentication
+    description: 登录与令牌获取。
+  - name: Labs
+    description: 实验室查询与可用性。
+  - name: Reservations
+    description: 预约查询及待确认草案。
+  - name: Repairs
+    description: 报修草案与工单。
+  - name: Actions
+    description: 草案的幂等确认执行。
+  - name: Knowledge
+    description: 知识文档与基于检索的问答。
+  - name: Chat
+    description: 受控 Agent 会话。
+  - name: Administration
+    description: 仅管理员可用的管理接口。
+paths:
+  /auth/login:
+    post:
+      tags: [Authentication]
+      security: []
+      operationId: login
+      summary: 用户登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /labs:
+    get:
+      tags: [Labs]
+      operationId: listLabs
+      summary: 分页查询实验室
+      parameters:
+        - { $ref: '#/components/parameters/Name' }
+        - { $ref: '#/components/parameters/Equipment' }
+        - { $ref: '#/components/parameters/MinCapacity' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+      responses:
+        '200':
+          description: 实验室列表
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LabPageResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /labs/{labId}/availability:
+    get:
+      tags: [Labs]
+      operationId: getLabAvailability
+      summary: 查询指定日期的实验室可用时段
+      parameters:
+        - { $ref: '#/components/parameters/LabId' }
+        - name: date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: from
+          in: query
+          schema: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+        - name: to
+          in: query
+          schema: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+      responses:
+        '200':
+          description: 开放时间及每个整点时隙的可用状态
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AvailabilityResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /reservations/me:
+    get:
+      tags: [Reservations]
+      operationId: listMyReservations
+      summary: 分页查询当前用户的预约
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/ReservationStatus' }
+        - { $ref: '#/components/parameters/From' }
+        - { $ref: '#/components/parameters/To' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+      responses:
+        '200':
+          description: 当前用户预约列表
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReservationPageResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /reservation-drafts:
+    post:
+      tags: [Reservations]
+      operationId: createReservationDraft
+      summary: 创建预约确认草案，不写入预约事实
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReservationDraftRequest' }
+      responses:
+        '201':
+          description: 待用户确认的预约草案
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionDraftResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableContent' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /reservations/{reservationId}/cancellation-draft:
+    post:
+      tags: [Reservations]
+      operationId: createCancellationDraft
+      summary: 创建取消预约确认草案
+      parameters:
+        - { $ref: '#/components/parameters/ReservationId' }
+      responses:
+        '201':
+          description: 待用户确认的取消草案
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionDraftResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableContent' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /repair-drafts:
+    post:
+      tags: [Repairs]
+      operationId: createRepairDraft
+      summary: 创建报修确认草案，不写入工单事实
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RepairDraftRequest' }
+      responses:
+        '201':
+          description: 待用户确认的报修草案
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionDraftResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableContent' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /repair-tickets/me:
+    get:
+      tags: [Repairs]
+      operationId: listMyRepairTickets
+      summary: 分页查询当前用户的工单
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/RepairTicketStatus' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+      responses:
+        '200':
+          description: 当前用户工单列表
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RepairTicketPageResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /actions/{actionId}/confirm:
+    post:
+      tags: [Actions]
+      operationId: confirmAction
+      summary: 确认并执行一个草案动作
+      description: 已成功的 actionId 返回已保存结果；首次确认必须使用创建草案时的会话。
+      parameters:
+        - { $ref: '#/components/parameters/ActionId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActionConfirmRequest' }
+      responses:
+        '200':
+          description: 首次成功或成功动作的幂等重放
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionExecutionResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableContent' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /admin/repair-tickets/{ticketId}:
+    patch:
+      tags: [Administration, Repairs]
+      operationId: processRepairTicket
+      summary: 管理员处理工单
+      parameters:
+        - { $ref: '#/components/parameters/TicketId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RepairTicketUpdateRequest' }
+      responses:
+        '200':
+          description: 更新后的工单
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RepairTicketResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableContent' }
+  /admin/labs/{labId}:
+    patch:
+      tags: [Administration, Labs]
+      operationId: updateLab
+      summary: 管理员更新实验室白名单字段
+      parameters:
+        - { $ref: '#/components/parameters/LabId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LabUpdateRequest' }
+      responses:
+        '200':
+          description: 更新后的实验室
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LabResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/knowledge/documents:
+    post:
+      tags: [Administration, Knowledge]
+      operationId: uploadKnowledgeDocument
+      summary: 上传知识文档并异步索引
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/KnowledgeDocumentUploadRequest' }
+      responses:
+        '202':
+          description: 已接受索引任务
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeDocumentResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+    get:
+      tags: [Administration, Knowledge]
+      operationId: listKnowledgeDocuments
+      summary: 分页查询知识文档版本
+      parameters:
+        - name: logicalDocumentCode
+          in: query
+          schema: { type: string, maxLength: 64 }
+        - name: publishStatus
+          in: query
+          schema: { $ref: '#/components/schemas/KnowledgePublishStatus' }
+        - name: indexStatus
+          in: query
+          schema: { $ref: '#/components/schemas/KnowledgeIndexStatus' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+      responses:
+        '200':
+          description: 文档版本列表
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeDocumentPageResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/knowledge/documents/{documentVersionId}/publish:
+    post:
+      tags: [Administration, Knowledge]
+      operationId: publishKnowledgeDocument
+      summary: 发布一个索引成功的文档版本
+      parameters:
+        - { $ref: '#/components/parameters/DocumentVersionId' }
+      responses:
+        '200':
+          description: 发布后的文档版本
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeDocumentResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /admin/knowledge/documents/{documentVersionId}/disable:
+    post:
+      tags: [Administration, Knowledge]
+      operationId: disableKnowledgeDocument
+      summary: 停用一个文档版本
+      parameters:
+        - { $ref: '#/components/parameters/DocumentVersionId' }
+      responses:
+        '200':
+          description: 停用后的文档版本
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeDocumentResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/agent-traces:
+    get:
+      tags: [Administration, Chat]
+      operationId: listAgentTraces
+      summary: 分页查询脱敏的 Agent 工具执行记录
+      parameters:
+        - name: requestId
+          in: query
+          schema: { type: string, maxLength: 64 }
+        - name: sessionId
+          in: query
+          schema: { type: string, maxLength: 64 }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+      responses:
+        '200':
+          description: 脱敏审计记录列表
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentTracePageResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /knowledge/questions:
+    post:
+      tags: [Knowledge]
+      operationId: askKnowledgeQuestion
+      summary: 根据已发布且已索引的资料回答问题
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/KnowledgeQuestionRequest' }
+      responses:
+        '200':
+          description: 有引用的回答，或固定无依据回答
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RagAnswerResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+        '504': { $ref: '#/components/responses/GatewayTimeout' }
+  /chat/sessions:
+    post:
+      tags: [Chat]
+      operationId: createChatSession
+      summary: 为当前用户创建聊天会话
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChatSessionCreateRequest' }
+      responses:
+        '201':
+          description: 已创建会话
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatSessionResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /chat/sessions/{sessionId}/messages:
+    post:
+      tags: [Chat]
+      operationId: sendChatMessage
+      summary: 发送一条消息并获取一轮 Agent 结果
+      parameters:
+        - { $ref: '#/components/parameters/SessionId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChatMessageRequest' }
+      responses:
+        '200':
+          description: Agent 回答，可包含待确认草案
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatMessageResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableContent' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+        '504': { $ref: '#/components/responses/GatewayTimeout' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    LabId:
+      name: labId
+      in: path
+      required: true
+      schema: { type: string, maxLength: 32, example: LAB-B402 }
+    ReservationId:
+      name: reservationId
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    TicketId:
+      name: ticketId
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    DocumentVersionId:
+      name: documentVersionId
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    ActionId:
+      name: actionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema: { type: string, maxLength: 64 }
+    Name:
+      name: name
+      in: query
+      schema: { type: string, maxLength: 128 }
+    Equipment:
+      name: equipment
+      in: query
+      schema: { type: string, maxLength: 255 }
+    MinCapacity:
+      name: minCapacity
+      in: query
+      schema: { type: integer, minimum: 1 }
+    From:
+      name: from
+      in: query
+      schema: { type: string, format: date-time }
+    To:
+      name: to
+      in: query
+      schema: { type: string, format: date-time }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    Size:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+  responses:
+    BadRequest: { description: 请求格式或字段校验失败, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    Unauthorized: { description: 未认证或登录凭据错误, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    Forbidden: { description: 无角色权限或资源不属于当前用户, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    NotFound: { description: 资源不存在或对当前用户不可见, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    Conflict: { description: 业务冲突、状态冲突或草案失效, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    UnprocessableContent: { description: 可解析但不满足领域规则, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    PayloadTooLarge: { description: 上传文件过大, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    UnsupportedMediaType: { description: 仅支持 UTF-8 Markdown 或 TXT, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    TooManyRequests: { description: 聊天请求超出每分钟限制, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    ServiceUnavailable: { description: Redis、模型或向量库不可用且不能安全降级, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    GatewayTimeout: { description: 模型或向量库调用超时, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [code, message, data, requestId]
+      properties:
+        code: { type: string, const: OK }
+        message: { type: string, const: 成功 }
+        data: {}
+        requestId: { type: string, example: req_01JABC }
+    ErrorResponse:
+      type: object
+      required: [code, message, requestId]
+      properties:
+        code: { type: string, example: RESERVATION_CONFLICT }
+        message: { type: string, example: 该实验室在指定时段已被预约，请重新选择。 }
+        requestId: { type: string, example: req_01JABC }
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password]
+      properties:
+        username: { type: string, minLength: 1, maxLength: 64 }
+        password: { type: string, format: password, minLength: 1, maxLength: 128 }
+    UserSummary:
+      type: object
+      required: [id, username, role, trainingStatus]
+      properties:
+        id: { type: integer, format: int64 }
+        username: { type: string }
+        role: { type: string, enum: [STUDENT, ADMIN] }
+        trainingStatus: { type: string, enum: [PENDING, PASSED, FAILED] }
+    LoginData:
+      type: object
+      required: [accessToken, tokenType, expiresAt, user]
+      properties:
+        accessToken: { type: string, writeOnly: true }
+        tokenType: { type: string, const: Bearer }
+        expiresAt: { type: string, format: date-time }
+        user: { $ref: '#/components/schemas/UserSummary' }
+    LoginResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/LoginData' } }
+    LabStatus: { type: string, enum: [ACTIVE, MAINTENANCE, DISABLED] }
+    Lab:
+      type: object
+      required: [id, name, capacity, equipmentDescription, openTime, closeTime, status]
+      properties:
+        id: { type: string, example: LAB-B402 }
+        name: { type: string }
+        capacity: { type: integer, minimum: 1 }
+        equipmentDescription: { type: string }
+        openTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+        closeTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+        status: { $ref: '#/components/schemas/LabStatus' }
+    PageLab:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Lab' } }
+        page: { type: integer }
+        size: { type: integer }
+        total: { type: integer, format: int64 }
+    LabPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/PageLab' } }
+    LabResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/Lab' } }
+    AvailabilitySlot:
+      type: object
+      required: [startTime, endTime, available]
+      properties:
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time }
+        available: { type: boolean }
+    AvailabilityData:
+      type: object
+      required: [labId, date, openTime, closeTime, slots]
+      properties:
+        labId: { type: string }
+        date: { type: string, format: date }
+        openTime: { type: string }
+        closeTime: { type: string }
+        slots: { type: array, items: { $ref: '#/components/schemas/AvailabilitySlot' } }
+    AvailabilityResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/AvailabilityData' } }
+    ReservationStatus: { type: string, enum: [CONFIRMED, CANCELLED] }
+    Reservation:
+      type: object
+      required: [id, reservationNo, labId, startTime, endTime, participantCount, status]
+      properties:
+        id: { type: integer, format: int64 }
+        reservationNo: { type: string, example: RSV-10001 }
+        labId: { type: string }
+        labName: { type: string }
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time }
+        participantCount: { type: integer, minimum: 1 }
+        status: { $ref: '#/components/schemas/ReservationStatus' }
+        cancelledAt: { type: [string, 'null'], format: date-time }
+    PageReservation:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Reservation' } }
+        page: { type: integer }
+        size: { type: integer }
+        total: { type: integer, format: int64 }
+    ReservationPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/PageReservation' } }
+    ReservationDraftRequest:
+      type: object
+      additionalProperties: false
+      required: [labId, startTime, endTime, participantCount]
+      properties:
+        labId: { type: string, maxLength: 32 }
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time }
+        participantCount: { type: integer, minimum: 1 }
+    RepairDraftRequest:
+      type: object
+      additionalProperties: false
+      required: [labId, equipmentInfo, description]
+      properties:
+        labId: { type: string, maxLength: 32 }
+        equipmentInfo: { type: string, minLength: 1, maxLength: 255 }
+        description: { type: string, minLength: 1, maxLength: 10000 }
+        safetyRisk: { type: boolean, default: false }
+    ActionType: { type: string, enum: [CREATE_RESERVATION, CANCEL_RESERVATION, CREATE_REPAIR_TICKET] }
+    ActionDraft:
+      type: object
+      required: [actionId, actionType, sessionId, expiresAt, payload, notices]
+      properties:
+        actionId: { type: string, format: uuid }
+        actionType: { $ref: '#/components/schemas/ActionType' }
+        sessionId: { type: string }
+        expiresAt: { type: string, format: date-time }
+        payload: { type: object, additionalProperties: true }
+        notices: { type: array, items: { type: string } }
+    ActionDraftResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/ActionDraft' } }
+    ActionConfirmRequest:
+      type: object
+      additionalProperties: false
+      required: [sessionId]
+      properties:
+        sessionId: { type: string, minLength: 1, maxLength: 64 }
+    ActionExecutionStatus: { type: string, enum: [SUCCEEDED] }
+    ActionExecution:
+      type: object
+      required: [actionId, actionType, executionStatus, idempotentReplay, result]
+      properties:
+        actionId: { type: string, format: uuid }
+        actionType: { $ref: '#/components/schemas/ActionType' }
+        executionStatus: { $ref: '#/components/schemas/ActionExecutionStatus' }
+        idempotentReplay: { type: boolean }
+        result: { type: object, additionalProperties: true }
+    ActionExecutionResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/ActionExecution' } }
+    RepairTicketStatus: { type: string, enum: [SUBMITTED, PROCESSING, RESOLVED] }
+    RepairTicket:
+      type: object
+      required: [id, ticketNo, labId, equipmentInfo, description, safetyRisk, status, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        ticketNo: { type: string, example: TKT-10001 }
+        labId: { type: string }
+        equipmentInfo: { type: string }
+        description: { type: string }
+        safetyRisk: { type: boolean }
+        status: { $ref: '#/components/schemas/RepairTicketStatus' }
+        resolutionNote: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PageRepairTicket:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/RepairTicket' } }
+        page: { type: integer }
+        size: { type: integer }
+        total: { type: integer, format: int64 }
+    RepairTicketPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/PageRepairTicket' } }
+    RepairTicketResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/RepairTicket' } }
+    RepairTicketUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [status, resolutionNote]
+      properties:
+        status: { $ref: '#/components/schemas/RepairTicketStatus' }
+        resolutionNote: { type: string, minLength: 1, maxLength: 10000 }
+    LabUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 128 }
+        capacity: { type: integer, minimum: 1 }
+        equipmentDescription: { type: string, minLength: 1, maxLength: 10000 }
+        openTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+        closeTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+        status: { $ref: '#/components/schemas/LabStatus' }
+    KnowledgePublishStatus: { type: string, enum: [DRAFT, PUBLISHED, DISABLED] }
+    KnowledgeIndexStatus: { type: string, enum: [PENDING, INDEXING, SUCCEEDED, FAILED] }
+    KnowledgeDocumentUploadRequest:
+      type: object
+      required: [file, logicalDocumentCode, title, version, effectiveAt]
+      properties:
+        file: { type: string, format: binary, description: UTF-8 .md 或 .txt 文件 }
+        logicalDocumentCode: { type: string, minLength: 1, maxLength: 64 }
+        title: { type: string, minLength: 1, maxLength: 255 }
+        version: { type: string, minLength: 1, maxLength: 64 }
+        effectiveAt: { type: string, format: date-time }
+        applicableLabIds:
+          type: array
+          items: { type: string, maxLength: 32 }
+          uniqueItems: true
+    KnowledgeDocument:
+      type: object
+      required: [id, logicalDocumentCode, version, title, effectiveAt, publishStatus, indexStatus, chunkCount]
+      properties:
+        id: { type: integer, format: int64 }
+        logicalDocumentCode: { type: string }
+        version: { type: string }
+        title: { type: string }
+        effectiveAt: { type: string, format: date-time }
+        applicableLabIds: { type: array, items: { type: string } }
+        publishStatus: { $ref: '#/components/schemas/KnowledgePublishStatus' }
+        indexStatus: { $ref: '#/components/schemas/KnowledgeIndexStatus' }
+        chunkCount: { type: integer, minimum: 0 }
+        indexFailureReason: { type: [string, 'null'] }
+    PageKnowledgeDocument:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/KnowledgeDocument' } }
+        page: { type: integer }
+        size: { type: integer }
+        total: { type: integer, format: int64 }
+    KnowledgeDocumentResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/KnowledgeDocument' } }
+    KnowledgeDocumentPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/PageKnowledgeDocument' } }
+    KnowledgeQuestionRequest:
+      type: object
+      additionalProperties: false
+      required: [question]
+      properties:
+        question: { type: string, minLength: 1, maxLength: 2000 }
+    Citation:
+      type: object
+      required: [documentTitle, version, chunkId, excerpt]
+      properties:
+        documentTitle: { type: string }
+        version: { type: string }
+        chunkId: { type: string }
+        excerpt: { type: string }
+    RagAnswer:
+      type: object
+      required: [answer, citations, retrieval]
+      properties:
+        answer: { type: string, description: 无依据时固定为“当前知识库中没有足够信息” }
+        citations: { type: array, items: { $ref: '#/components/schemas/Citation' } }
+        retrieval:
+          type: object
+          required: [topK, hitCount]
+          properties:
+            topK: { type: integer }
+            hitCount: { type: integer }
+    RagAnswerResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/RagAnswer' } }
+    ChatSessionCreateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1, maxLength: 128 }
+    ChatSession:
+      type: object
+      required: [sessionId, createdAt]
+      properties:
+        sessionId: { type: string }
+        name: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+    ChatSessionResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/ChatSession' } }
+    ChatMessageRequest:
+      type: object
+      additionalProperties: false
+      required: [content]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 10000 }
+    ChatMessage:
+      type: object
+      required: [sessionId, messageId, answer, citations, toolCallCount]
+      properties:
+        sessionId: { type: string }
+        messageId: { type: string }
+        answer: { type: string }
+        citations: { type: array, items: { $ref: '#/components/schemas/Citation' } }
+        toolCallCount: { type: integer, minimum: 0, maximum: 8 }
+        draft: { $ref: '#/components/schemas/ActionDraft' }
+    ChatMessageResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/ChatMessage' } }
+    AgentTrace:
+      type: object
+      required: [id, requestId, toolName, durationMs, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        requestId: { type: string }
+        sessionId: { type: [string, 'null'] }
+        toolName: { type: string }
+        resultSummary: { type: [string, 'null'], description: 已脱敏摘要 }
+        durationMs: { type: integer, minimum: 0 }
+        errorCode: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+    PageAgentTrace:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/AgentTrace' } }
+        page: { type: integer }
+        size: { type: integer }
+        total: { type: integer, format: int64 }
+    AgentTracePageResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/PageAgentTrace' } }
