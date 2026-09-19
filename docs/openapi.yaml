@@ -508,7 +508,7 @@ components:
       type: object
       required: [code, message, data, requestId]
       properties:
-        code: { type: string, const: OK }
+        code: { type: integer, const: 200 }
         message: { type: string, const: 成功 }
         data: {}
         requestId: { type: string, example: req_01JABC }
@@ -516,7 +516,10 @@ components:
       type: object
       required: [code, message, requestId]
       properties:
-        code: { type: string, example: RESERVATION_CONFLICT }
+        code:
+          type: integer
+          enum: [40000, 40001, 40100, 40300, 40301, 40400, 40401, 40402, 40900, 40901, 40902, 40903, 40904, 41300, 41500, 42200, 42201, 42202, 42203, 42204, 42205, 42900, 50000, 50300, 50301, 50400]
+          example: 40901
         message: { type: string, example: 该实验室在指定时段已被预约，请重新选择。 }
         requestId: { type: string, example: req_01JABC }
     LoginRequest:

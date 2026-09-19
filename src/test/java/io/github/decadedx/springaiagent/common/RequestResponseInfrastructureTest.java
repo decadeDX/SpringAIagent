@@ -54,10 +54,10 @@ class RequestResponseInfrastructureTest {
         GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
         ResponseEntity<Result<Void>> response = handler.handleBusinessException(
-                new BusinessException(HttpStatus.CONFLICT, "BUSINESS_CONFLICT", "状态冲突"));
+                new BusinessException(HttpStatus.CONFLICT, ApiCode.BUSINESS_CONFLICT, "状态冲突"));
 
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
-        assertEquals("BUSINESS_CONFLICT", response.getBody().code());
+        assertEquals(40900, response.getBody().code());
         assertEquals("req-error-001", response.getBody().requestId());
         assertNull(response.getBody().data());
     }

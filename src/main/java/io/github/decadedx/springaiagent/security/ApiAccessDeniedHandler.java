@@ -1,6 +1,7 @@
 package io.github.decadedx.springaiagent.security;
 
 import tools.jackson.databind.ObjectMapper;
+import io.github.decadedx.springaiagent.common.ApiCode;
 import io.github.decadedx.springaiagent.common.Result;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -44,6 +45,6 @@ public class ApiAccessDeniedHandler implements AccessDeniedHandler {
                        AccessDeniedException accessDeniedException) throws IOException, ServletException {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        objectMapper.writeValue(response.getOutputStream(), Result.failure("FORBIDDEN", "无权访问该资源"));
+        objectMapper.writeValue(response.getOutputStream(), Result.failure(ApiCode.FORBIDDEN, "无权访问该资源"));
     }
 }

@@ -1,6 +1,7 @@
 package io.github.decadedx.springaiagent.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import io.github.decadedx.springaiagent.common.ApiCode;
 import io.github.decadedx.springaiagent.dto.LoginDTO;
 import io.github.decadedx.springaiagent.entity.SysUser;
 import io.github.decadedx.springaiagent.exception.BusinessException;
@@ -57,7 +58,7 @@ public class AuthServiceImpl implements AuthService {
         SysUser user = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, loginDTO.username()));
         if (user == null || !passwordEncoder.matches(loginDTO.password(), user.getPasswordHash())) {
-            throw new BusinessException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "账号或密码错误");
+            throw new BusinessException(HttpStatus.UNAUTHORIZED, ApiCode.UNAUTHENTICATED, "账号或密码错误");
         }
 
         IssuedJwtToken token = jwtTokenService.issue(user.getId(), user.getRole());

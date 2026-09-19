@@ -496,7 +496,7 @@ UNIQUE(lab_id, slot_start_time)
 
 ```json
 {
-  "code": "RESERVATION_CONFLICT",
+  "code": 40901,
   "message": "该实验室在指定时段已被预约，请重新选择。",
   "requestId": "req-xxxx"
 }

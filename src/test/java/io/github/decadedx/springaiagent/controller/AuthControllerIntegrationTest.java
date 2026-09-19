@@ -35,7 +35,7 @@ class AuthControllerIntegrationTest {
                         .content("{\"username\":\"student01\",\"password\":\"student01\"}"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Request-Id", "req-login-001"))
-                .andExpect(jsonPath("$.code").value("OK"))
+                .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.requestId").value("req-login-001"))
                 .andExpect(jsonPath("$.data.accessToken").value(notNullValue()))
                 .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
@@ -50,7 +50,7 @@ class AuthControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"student01\",\"password\":\"wrong-password\"}"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+                .andExpect(jsonPath("$.code").value(40100))
                 .andExpect(jsonPath("$.requestId").value(notNullValue()))
                 .andExpect(jsonPath("$.data").doesNotExist());
     }
@@ -59,7 +59,7 @@ class AuthControllerIntegrationTest {
     void shouldRequireTokenForBusinessApi() throws Exception {
         mockMvc.perform(get("/api/reservations/me"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+                .andExpect(jsonPath("$.code").value(40100))
                 .andExpect(jsonPath("$.requestId").value(notNullValue()));
     }
 
@@ -72,7 +72,7 @@ class AuthControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.code").value(40300))
                 .andExpect(jsonPath("$.requestId").value(notNullValue()));
     }
 
@@ -81,7 +81,7 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(get("/api/reservations/me")
                         .header("Authorization", "Bearer invalid-token"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+                .andExpect(jsonPath("$.code").value(40100));
     }
 
     private String loginAndReadToken(String username, String password) throws Exception {

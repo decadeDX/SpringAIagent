@@ -4,7 +4,7 @@
 
 - 基路径为 `/api`；除登录和健康检查外都要求 `Authorization: Bearer <accessToken>`。
 - 操作者身份只来自 Token；所有请求体均不定义 `userId`。时间使用 ISO-8601 且带 `+08:00`，例如 `2026-09-17T14:00:00+08:00`。
-- 所有 Controller 使用 [后端开发规范](backend-conventions.md) 中的 `Result<T>`：`{"code":"OK","message":"成功","data": {...}, "requestId": "req_xxx"}`；错误响应见 [HTTP 返回码与业务码](http-error-codes.md)。Controller 接收 DTO、返回 VO，不能以 Entity 作为请求或响应模型。
+- 所有 Controller 使用 [后端开发规范](backend-conventions.md) 中的 `Result<T>`：`{"code":200,"message":"成功","data": {...}, "requestId": "req_xxx"}`；错误响应见 [HTTP 返回码与业务码](http-error-codes.md)。Controller 接收 DTO、返回 VO，不能以 Entity 作为请求或响应模型。
 - 路径参数、DTO/VO 的字段含义以本接口文档为准；持久化表、时隙唯一键、UTC 时间存储和动作幂等记录必须遵从 [数据库设计](database-design.md)，不得由 Controller 或前端绕过。
 - 分页参数：`page` 从 1 开始，默认 20、最大 50；列表 `data` 为 `{items,page,size,total}`。
 - 所有草案创建与动作确认只由当前用户操作。`actionId` 是确认接口的持久化幂等键；客户端无需也不应传 `userId`。
@@ -19,7 +19,7 @@
 
 ```json
 {
-  "code": "OK",
+  "code": 200,
   "message": "成功",
   "data": {
     "accessToken": "eyJ...",
@@ -56,7 +56,7 @@
 
 ```json
 {
-  "code": "OK",
+  "code": 200,
   "message": "成功",
   "data": {
     "actionId": "7a9db38a-0d13-4da9-8be1-5ba1c3d8bfa4",
@@ -96,7 +96,7 @@
 
 ```json
 {
-  "code": "OK",
+  "code": 200,
   "message": "成功",
   "data": {
     "actionId": "7a9db38a-0d13-4da9-8be1-5ba1c3d8bfa4",
@@ -109,7 +109,7 @@
 }
 ```
 
-同一 `actionId` 已成功时，即使 Redis 草案已过期，也返回已持久化的原结果并将 `idempotentReplay` 置为 `true`。尚未执行而 Redis 草案过期时返回 `409 ACTION_DRAFT_EXPIRED`。
+同一 `actionId` 已成功时，即使 Redis 草案已过期，也返回已持久化的原结果并将 `idempotentReplay` 置为 `true`。尚未执行而 Redis 草案过期时返回 HTTP `409`、响应码 `40903`（内部码 `ACTION_DRAFT_EXPIRED`）。
 
 ## 管理实验室与知识库
 
@@ -132,7 +132,7 @@
 
 ```json
 {
-  "code": "OK",
+  "code": 200,
   "message": "成功",
   "data": {
     "answer": "预约人工智能实验室的人员需要先通过安全培训。",

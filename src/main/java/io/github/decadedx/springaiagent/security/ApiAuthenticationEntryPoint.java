@@ -1,6 +1,7 @@
 package io.github.decadedx.springaiagent.security;
 
 import tools.jackson.databind.ObjectMapper;
+import io.github.decadedx.springaiagent.common.ApiCode;
 import io.github.decadedx.springaiagent.common.Result;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,7 +44,7 @@ public class ApiAuthenticationEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException authException) throws IOException, ServletException {
         writeResponse(response, HttpServletResponse.SC_UNAUTHORIZED,
-                Result.failure("UNAUTHENTICATED", "请先登录或重新登录"));
+                Result.failure(ApiCode.UNAUTHENTICATED, "请先登录或重新登录"));
     }
 
     /**

@@ -1,5 +1,6 @@
 package io.github.decadedx.springaiagent.exception;
 
+import io.github.decadedx.springaiagent.common.ApiCode;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -11,16 +12,16 @@ public class BusinessException extends RuntimeException {
     private final HttpStatus status;
 
     /** 供前端和测试稳定判断的错误码。 */
-    private final String code;
+    private final ApiCode code;
 
     /**
      * 创建业务异常。
      *
      * @param status HTTP 状态
-     * @param code 稳定错误码
+     * @param code 内部稳定错误码
      * @param message 面向调用方的错误消息
      */
-    public BusinessException(HttpStatus status, String code, String message) {
+    public BusinessException(HttpStatus status, ApiCode code, String message) {
         super(message);
         this.status = status;
         this.code = code;
@@ -40,7 +41,7 @@ public class BusinessException extends RuntimeException {
      *
      * @return 错误码
      */
-    public String getCode() {
+    public ApiCode getCode() {
         return code;
     }
 }

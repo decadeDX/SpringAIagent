@@ -1,5 +1,6 @@
 package io.github.decadedx.springaiagent.security;
 
+import io.github.decadedx.springaiagent.common.ApiCode;
 import io.github.decadedx.springaiagent.enums.UserRole;
 import io.github.decadedx.springaiagent.exception.BusinessException;
 import org.junit.jupiter.api.AfterEach;
@@ -34,6 +35,6 @@ class CurrentUserTest {
     void shouldRejectMissingAuthentication() {
         BusinessException exception = assertThrows(BusinessException.class, CurrentUser::requireId);
 
-        assertEquals("UNAUTHENTICATED", exception.getCode());
+        assertEquals(ApiCode.UNAUTHENTICATED, exception.getCode());
     }
 }

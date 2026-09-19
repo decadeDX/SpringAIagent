@@ -1,5 +1,6 @@
 package io.github.decadedx.springaiagent.security;
 
+import io.github.decadedx.springaiagent.common.ApiCode;
 import io.github.decadedx.springaiagent.enums.UserRole;
 import io.github.decadedx.springaiagent.exception.BusinessException;
 import org.springframework.http.HttpStatus;
@@ -40,7 +41,7 @@ public final class CurrentUser {
     private static AuthenticatedUser requireAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof AuthenticatedUser user)) {
-            throw new BusinessException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "请先登录");
+            throw new BusinessException(HttpStatus.UNAUTHORIZED, ApiCode.UNAUTHENTICATED, "请先登录");
         }
         return user;
     }

@@ -1,5 +1,6 @@
 package io.github.decadedx.springaiagent.exception;
 
+import io.github.decadedx.springaiagent.common.ApiCode;
 import io.github.decadedx.springaiagent.common.Result;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,7 +38,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Result<Void>> handleValidationException(MethodArgumentNotValidException exception) {
         FieldError fieldError = exception.getBindingResult().getFieldError();
         String message = fieldError == null ? "请求参数不合法" : fieldError.getDefaultMessage();
-        return ResponseEntity.badRequest().body(Result.failure("BAD_REQUEST", message));
+        return ResponseEntity.badRequest().body(Result.failure(ApiCode.BAD_REQUEST, message));
     }
 
     /**
@@ -48,7 +49,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Result<Void>> handleUnreadableMessage(HttpMessageNotReadableException exception) {
-        return ResponseEntity.badRequest().body(Result.failure("BAD_REQUEST", "请求体格式不正确"));
+        return ResponseEntity.badRequest().body(Result.failure(ApiCode.BAD_REQUEST, "请求体格式不正确"));
     }
 
     /**
@@ -60,6 +61,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<Void>> handleUnexpectedException(Exception exception) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Result.failure("INTERNAL_ERROR", "系统繁忙，请稍后重试"));
+                .body(Result.failure(ApiCode.INTERNAL_ERROR, "系统繁忙，请稍后重试"));
     }
 }
