@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.decadedx.springaiagent.mapper.ReservationSlotMapper">
+    <select id="selectOccupiedSlotStarts" resultType="java.time.LocalDateTime">
+        SELECT slot_start_time
+        FROM reservation_slot
+        WHERE lab_id = #{labId}
+          AND slot_start_time &gt;= #{startTime}
+          AND slot_start_time &lt; #{endTime}
+    </select>
+
+    <insert id="insertBatch">
+        INSERT INTO reservation_slot (id, lab_id, slot_start_time, reservation_id)
+        VALUES
+        <foreach collection="slots" item="slot" separator=",">
+            (#{slot.id}, #{slot.labId}, #{slot.slotStartTime}, #{slot.reservationId})
+        </foreach>
+    </insert>
+
+    <delete id="deleteByReservationId">
+        DELETE FROM reservation_slot
+        WHERE reservation_id = #{reservationId}
+    </delete>
+</mapper>

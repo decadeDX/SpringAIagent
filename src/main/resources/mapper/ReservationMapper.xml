@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.decadedx.springaiagent.mapper.ReservationMapper">
+    <sql id="mineConditions">
+        WHERE r.user_id = #{userId}
+        <if test="status != null">
+            AND r.status = #{status}
+        </if>
+        <if test="from != null">
+            AND r.end_time &gt; #{from}
+        </if>
+        <if test="to != null">
+            AND r.start_time &lt; #{to}
+        </if>
+    </sql>
+
+    <select id="selectMine" resultType="io.github.decadedx.springaiagent.entity.Reservation">
+        SELECT r.id, r.user_id, r.lab_id, r.start_time, r.end_time, r.participant_count,
+               r.status, r.cancelled_at, r.created_at, r.updated_at, l.name AS lab_name
+        FROM reservation r
+        INNER JOIN lab l ON l.id = r.lab_id
+        <include refid="mineConditions"/>
+        ORDER BY r.start_time DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countMine" resultType="long">
+        SELECT COUNT(*)
+        FROM reservation r
+        <include refid="mineConditions"/>
+    </select>
+
+    <select id="selectByIdForUpdate" resultType="io.github.decadedx.springaiagent.entity.Reservation">
+        SELECT id, user_id, lab_id, start_time, end_time, participant_count,
+               status, cancelled_at, created_at, updated_at
+        FROM reservation
+        WHERE id = #{reservationId}
+        FOR UPDATE
+    </select>
+
+    <select id="countActiveByUser" resultType="long">
+        SELECT COUNT(*)
+        FROM reservation
+        WHERE user_id = #{userId}
+          AND status = 'CONFIRMED'
+          AND end_time &gt; #{now}
+    </select>
+
+    <update id="cancelConfirmed">
+        UPDATE reservation
+        SET status = 'CANCELLED', cancelled_at = #{cancelledAt}
+        WHERE id = #{reservationId}
+          AND status = 'CONFIRMED'
+    </update>
+</mapper>

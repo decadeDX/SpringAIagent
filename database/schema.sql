@@ -8,3 +8,4 @@ USE lab_agent;
 -- 本文件与该迁移保持相同的表定义，供空 MySQL 实例的首次建库使用。
 SOURCE src/main/resources/db/migration/V1__schema.sql;
 SOURCE src/main/resources/db/migration/V2__seed_sys_users.sql;
+SOURCE src/main/resources/db/migration/V3__seed_labs.sql;
