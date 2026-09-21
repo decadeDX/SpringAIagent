@@ -33,3 +33,4 @@ build/
 
 # 本地 Docker Compose 密码配置
 /deploy/.env
+/knowledge/uploads/

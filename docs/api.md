@@ -140,7 +140,7 @@
       "documentTitle": "人工智能实验室使用指南", "version": "v1.0",
       "chunkId": "docv-12-003", "excerpt": "……预约人工智能实验室的人员应先完成安全培训……"
     }],
-    "retrieval": {"topK": 5, "hitCount": 3}
+    "retrieval": {"topK": 5, "hitCount": 3, "retrievalMs": 18}
   },
   "requestId": "req_x"
 }

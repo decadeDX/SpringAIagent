@@ -803,10 +803,11 @@ components:
         citations: { type: array, items: { $ref: '#/components/schemas/Citation' } }
         retrieval:
           type: object
-          required: [topK, hitCount]
+          required: [topK, hitCount, retrievalMs]
           properties:
             topK: { type: integer }
             hitCount: { type: integer }
+            retrievalMs: { type: integer, minimum: 0 }
     RagAnswerResponse:
       allOf:
         - $ref: '#/components/schemas/SuccessEnvelope'

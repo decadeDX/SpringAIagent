@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.decadedx.springaiagent.mapper.KnowledgeDocumentMapper">
+    <sql id="pageConditions">
+        WHERE 1 = 1
+        <if test="logicalDocumentCode != null and logicalDocumentCode != ''">
+            AND kd.logical_document_code = #{logicalDocumentCode}
+        </if>
+        <if test="publishStatus != null">
+            AND kd.publish_status = #{publishStatus}
+        </if>
+        <if test="indexStatus != null">
+            AND kd.index_status = #{indexStatus}
+        </if>
+    </sql>
+
+    <select id="selectPage" resultType="io.github.decadedx.springaiagent.entity.KnowledgeDocument">
+        SELECT kd.id, kd.logical_document_code, kd.version, kd.title, kd.effective_at, kd.applicable_lab_ids,
+               kd.publish_status, kd.index_status, kd.source_file_path, kd.index_failure_reason, kd.created_by,
+               kd.created_at, kd.updated_at, COUNT(kc.id) AS chunk_count
+        FROM knowledge_document kd
+        LEFT JOIN knowledge_chunk kc ON kc.document_id = kd.id
+        <include refid="pageConditions"/>
+        GROUP BY kd.id, kd.logical_document_code, kd.version, kd.title, kd.effective_at, kd.applicable_lab_ids,
+                 kd.publish_status, kd.index_status, kd.source_file_path, kd.index_failure_reason, kd.created_by,
+                 kd.created_at, kd.updated_at
+        ORDER BY kd.created_at DESC, kd.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countPage" resultType="long">
+        SELECT COUNT(*)
+        FROM knowledge_document kd
+        <include refid="pageConditions"/>
+    </select>
+
+    <select id="selectByIdForUpdate" resultType="io.github.decadedx.springaiagent.entity.KnowledgeDocument">
+        SELECT id, logical_document_code, version, title, effective_at, applicable_lab_ids,
+               publish_status, index_status, source_file_path, index_failure_reason, created_by, created_at, updated_at
+        FROM knowledge_document
+        WHERE id = #{documentId}
+        FOR UPDATE
+    </select>
+
+    <select id="selectByLogicalCodeForUpdate" resultType="io.github.decadedx.springaiagent.entity.KnowledgeDocument">
+        SELECT id, logical_document_code, version, title, effective_at, applicable_lab_ids,
+               publish_status, index_status, source_file_path, index_failure_reason, created_by, created_at, updated_at
+        FROM knowledge_document
+        WHERE logical_document_code = #{logicalDocumentCode}
+        ORDER BY id
+        FOR UPDATE
+    </select>
+
+    <update id="claimPendingForIndexing">
+        UPDATE knowledge_document
+        SET index_status = 'INDEXING', index_failure_reason = NULL
+        WHERE id = #{documentId}
+          AND index_status = 'PENDING'
+    </update>
+
+    <update id="markIndexSucceeded">
+        UPDATE knowledge_document
+        SET index_status = 'SUCCEEDED', index_failure_reason = NULL
+        WHERE id = #{documentId}
+          AND index_status = 'INDEXING'
+    </update>
+
+    <update id="markIndexFailed">
+        UPDATE knowledge_document
+        SET index_status = 'FAILED', index_failure_reason = #{reason}
+        WHERE id = #{documentId}
+    </update>
+
+    <update id="resetIndexingToPending">
+        UPDATE knowledge_document
+        SET index_status = 'PENDING'
+        WHERE index_status = 'INDEXING'
+    </update>
+
+    <select id="selectPendingIds" resultType="long">
+        SELECT id
+        FROM knowledge_document
+        WHERE index_status = 'PENDING'
+        ORDER BY created_at, id
+    </select>
+
+    <select id="selectPublishedSucceededIds" resultType="long">
+        SELECT id
+        FROM knowledge_document
+        WHERE publish_status = 'PUBLISHED'
+          AND index_status = 'SUCCEEDED'
+    </select>
+
+    <update id="disablePublishedByLogicalCode">
+        UPDATE knowledge_document
+        SET publish_status = 'DISABLED'
+        WHERE logical_document_code = #{logicalDocumentCode}
+          AND id != #{excludingId}
+          AND publish_status = 'PUBLISHED'
+    </update>
+
+    <update id="publish">
+        UPDATE knowledge_document
+        SET publish_status = 'PUBLISHED'
+        WHERE id = #{documentId}
+    </update>
+
+    <update id="disable">
+        UPDATE knowledge_document
+        SET publish_status = 'DISABLED'
+        WHERE id = #{documentId}
+          AND publish_status = 'PUBLISHED'
+    </update>
+</mapper>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.decadedx.springaiagent.mapper.KnowledgeChunkMapper">
+    <insert id="insertBatch">
+        INSERT INTO knowledge_chunk (id, document_id, sequence_no, content, summary, vector_record_id, content_hash)
+        VALUES
+        <foreach collection="chunks" item="chunk" separator=",">
+            (#{chunk.id}, #{chunk.documentId}, #{chunk.sequenceNo}, #{chunk.content}, #{chunk.summary},
+             #{chunk.vectorRecordId}, #{chunk.contentHash})
+        </foreach>
+    </insert>
+
+    <select id="selectByDocumentId" resultType="io.github.decadedx.springaiagent.entity.KnowledgeChunk">
+        SELECT id, document_id, sequence_no, content, summary, vector_record_id, content_hash, created_at
+        FROM knowledge_chunk
+        WHERE document_id = #{documentId}
+        ORDER BY sequence_no
+    </select>
+
+    <select id="countByDocumentId" resultType="int">
+        SELECT COUNT(*)
+        FROM knowledge_chunk
+        WHERE document_id = #{documentId}
+    </select>
+
+    <delete id="deleteByDocumentId">
+        DELETE FROM knowledge_chunk
+        WHERE document_id = #{documentId}
+    </delete>
+</mapper>

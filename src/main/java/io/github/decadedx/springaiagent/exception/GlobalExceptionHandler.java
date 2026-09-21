@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * 将 Controller 和 Service 抛出的异常转换为统一、无敏感细节的 API 响应。
@@ -50,6 +51,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Result<Void>> handleUnreadableMessage(HttpMessageNotReadableException exception) {
         return ResponseEntity.badRequest().body(Result.failure(ApiCode.BAD_REQUEST, "请求体格式不正确"));
+    }
+
+    /**
+     * 将超过知识文档上传限制的 multipart 请求转换为稳定的文件大小错误。
+     *
+     * @param exception 上传体大小超限异常
+     * @return 413 统一错误体
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Result<Void>> handleMaxUploadSize(MaxUploadSizeExceededException exception) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(Result.failure(ApiCode.FILE_TOO_LARGE, "上传文件不能超过 5 MiB"));
     }
 
     /**

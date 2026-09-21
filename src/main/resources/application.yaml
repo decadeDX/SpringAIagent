@@ -17,6 +17,39 @@ spring:
       host: ${REDIS_HOST:127.0.0.1}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD}
+      client-type: jedis
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+  ai:
+    model:
+      chat: ${SPRING_AI_MODEL_CHAT:none}
+      embedding: ${SPRING_AI_MODEL_EMBEDDING:none}
+      image: none
+      moderation: none
+      audio:
+        speech: none
+        transcription: none
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        model: ${OPENAI_CHAT_MODEL:gpt-5-mini}
+      embedding:
+        model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+    vectorstore:
+      type: ${SPRING_AI_VECTORSTORE_TYPE:none}
+      redis:
+        index-name: lab-knowledge-index
+        prefix: lab-knowledge:
+        initialize-schema: ${KNOWLEDGE_RAG_ENABLED:false}
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+
+knowledge:
+  rag-enabled: ${KNOWLEDGE_RAG_ENABLED:false}
+  storage-path: ${KNOWLEDGE_STORAGE_PATH:knowledge/uploads}
+  cache-ttl: PT10M
 
 security:
   jwt:

@@ -29,7 +29,21 @@
     <properties>
         <!-- 项目统一编译目标，保持与当前运行环境一致。 -->
         <java.version>17</java.version>
+        <!-- Spring AI 依赖版本统一由 BOM 管理。 -->
+        <spring-ai.version>2.0.1</spring-ai.version>
     </properties>
+    <dependencyManagement>
+        <dependencies>
+            <!-- 锁定 Chat、Embedding 与向量存储模块的兼容版本。 -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
         <!-- 运行监控与 Redis 基础设施。 -->
         <dependency>
@@ -39,6 +53,15 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- RAG 使用 OpenAI 模型和 Redis Stack 向量检索，不使用内存向量存储。 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-openai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-vector-store-redis</artifactId>
         </dependency>
         <!-- 数据持久化：MyBatis-Plus 负责 Mapper，Flyway 管理数据库迁移。 -->
         <dependency>
