@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.decadedx.springaiagent.mapper.RepairTicketMapper">
+    <sql id="mineConditions">
+        WHERE user_id = #{userId}
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+    </sql>
+
+    <select id="selectMine" resultType="io.github.decadedx.springaiagent.entity.RepairTicket">
+        SELECT id, user_id, lab_id, equipment_info, description, safety_risk, status,
+               resolution_note, processed_by, version, created_at, updated_at
+        FROM repair_ticket
+        <include refid="mineConditions"/>
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countMine" resultType="long">
+        SELECT COUNT(*)
+        FROM repair_ticket
+        <include refid="mineConditions"/>
+    </select>
+
+    <select id="selectByIdForUpdate" resultType="io.github.decadedx.springaiagent.entity.RepairTicket">
+        SELECT id, user_id, lab_id, equipment_info, description, safety_risk, status,
+               resolution_note, processed_by, version, created_at, updated_at
+        FROM repair_ticket
+        WHERE id = #{ticketId}
+        FOR UPDATE
+    </select>
+
+    <update id="updateProcess">
+        UPDATE repair_ticket
+        SET status = #{status},
+            resolution_note = #{resolutionNote},
+            processed_by = #{processedBy},
+            version = version + 1
+        WHERE id = #{ticketId}
+          AND version = #{version}
+    </update>
+</mapper>
