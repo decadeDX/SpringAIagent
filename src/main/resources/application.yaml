@@ -38,10 +38,9 @@ spring:
       embedding:
         model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
     vectorstore:
-      type: ${SPRING_AI_VECTORSTORE_TYPE:none}
       redis:
         index-name: lab-knowledge-index
-        prefix: lab-knowledge:
+        prefix: "lab-knowledge:"
         initialize-schema: ${KNOWLEDGE_RAG_ENABLED:false}
 mybatis-plus:
   mapper-locations: classpath*:mapper/**/*.xml

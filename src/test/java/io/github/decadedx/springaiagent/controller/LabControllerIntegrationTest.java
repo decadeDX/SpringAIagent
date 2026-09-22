@@ -15,9 +15,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -70,6 +75,20 @@ class LabControllerIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(40401))
                 .andExpect(jsonPath("$.requestId").value(notNullValue()));
+    }
+
+    @Test
+    void shouldDeclarePatternMatchingSerializedLabTimes() throws Exception {
+        String openApi = Files.readString(Path.of("docs/openapi.yaml"));
+        Matcher openTimeMatcher = Pattern.compile("openTime: \\{ type: string, pattern: '([^']+)' \\}")
+                .matcher(openApi);
+        Matcher closeTimeMatcher = Pattern.compile("closeTime: \\{ type: string, pattern: '([^']+)' \\}")
+                .matcher(openApi);
+
+        assertTrue(openTimeMatcher.find());
+        assertTrue(Pattern.compile(openTimeMatcher.group(1)).matcher("09:00").matches());
+        assertTrue(closeTimeMatcher.find());
+        assertTrue(Pattern.compile(closeTimeMatcher.group(1)).matcher("22:00").matches());
     }
 
     private String loginAndReadToken() throws Exception {

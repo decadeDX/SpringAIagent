@@ -80,10 +80,10 @@ paths:
           schema: { type: string, format: date }
         - name: from
           in: query
-          schema: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+          schema: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
         - name: to
           in: query
-          schema: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+          schema: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
       responses:
         '200':
           description: 开放时间及每个整点时隙的可用状态
@@ -559,8 +559,8 @@ components:
         name: { type: string }
         capacity: { type: integer, minimum: 1 }
         equipmentDescription: { type: string }
-        openTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
-        closeTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+        openTime: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
+        closeTime: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
         status: { $ref: '#/components/schemas/LabStatus' }
     PageLab:
       type: object
@@ -731,8 +731,8 @@ components:
         name: { type: string, minLength: 1, maxLength: 128 }
         capacity: { type: integer, minimum: 1 }
         equipmentDescription: { type: string, minLength: 1, maxLength: 10000 }
-        openTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
-        closeTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+        openTime: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
+        closeTime: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
         status: { $ref: '#/components/schemas/LabStatus' }
     KnowledgePublishStatus: { type: string, enum: [DRAFT, PUBLISHED, DISABLED] }
     KnowledgeIndexStatus: { type: string, enum: [PENDING, INDEXING, SUCCEEDED, FAILED] }

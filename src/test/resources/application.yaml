@@ -14,5 +14,3 @@ spring:
       audio:
         speech: none
         transcription: none
-    vectorstore:
-      type: none
