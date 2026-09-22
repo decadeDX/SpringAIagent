@@ -67,6 +67,22 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LabPageResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+  /labs/{labId}:
+    get:
+      tags: [Labs]
+      operationId: getLabDetail
+      summary: 查询实验室详情
+      description: Redis 详情缓存不可用时服务端回源 MySQL。
+      parameters:
+        - { $ref: '#/components/parameters/LabId' }
+      responses:
+        '200':
+          description: 实验室详情
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LabResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /labs/{labId}/availability:
     get:
       tags: [Labs]

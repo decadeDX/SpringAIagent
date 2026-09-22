@@ -5,6 +5,7 @@ import io.github.decadedx.springaiagent.dto.ChatMessageDTO;
 import io.github.decadedx.springaiagent.dto.ChatSessionCreateDTO;
 import io.github.decadedx.springaiagent.service.AgentOrchestrationService;
 import io.github.decadedx.springaiagent.service.ChatSessionService;
+import io.github.decadedx.springaiagent.service.ChatRateLimiter;
 import io.github.decadedx.springaiagent.vo.ChatMessageVO;
 import io.github.decadedx.springaiagent.vo.ChatSessionVO;
 import jakarta.validation.Valid;
@@ -29,15 +30,20 @@ public class ChatController {
     /** Agent 编排服务。 */
     private final AgentOrchestrationService agentOrchestrationService;
 
+    /** 聊天限流服务。 */
+    private final ChatRateLimiter chatRateLimiter;
+
     /**
      * 创建聊天控制器。
      *
      * @param chatSessionService 会话服务
      * @param agentOrchestrationService Agent 编排服务
      */
-    public ChatController(ChatSessionService chatSessionService, AgentOrchestrationService agentOrchestrationService) {
+    public ChatController(ChatSessionService chatSessionService, AgentOrchestrationService agentOrchestrationService,
+                          ChatRateLimiter chatRateLimiter) {
         this.chatSessionService = chatSessionService;
         this.agentOrchestrationService = agentOrchestrationService;
+        this.chatRateLimiter = chatRateLimiter;
     }
 
     /**
@@ -61,6 +67,7 @@ public class ChatController {
      */
     @PostMapping("/{sessionId}/messages")
     public Result<ChatMessageVO> send(@PathVariable String sessionId, @Valid @RequestBody ChatMessageDTO messageDTO) {
+        chatRateLimiter.check();
         return Result.success(agentOrchestrationService.send(sessionId, messageDTO));
     }
 }

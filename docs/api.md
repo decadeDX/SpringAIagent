@@ -36,6 +36,7 @@
 | 方法 | 路径 | 权限 | 请求/查询参数 | 成功 |
 |---|---|---|---|---|
 | GET | `/api/labs` | 已登录 | `name?`、`equipment?`、`minCapacity?`、分页 | 200，实验室摘要列表 |
+| GET | `/api/labs/{labId}` | 已登录 | 无 | 200，实验室详情；Redis 缓存故障时回源 MySQL |
 | GET | `/api/labs/{labId}/availability` | 已登录 | `date` 必填，`from?`、`to?`（`HH:mm`） | 200，开放时间与可用结果 |
 | GET | `/api/reservations/me` | STUDENT | `status?`、`from?`、`to?`、分页 | 200，只返回本人 |
 | POST | `/api/reservation-drafts` | STUDENT | 下方预约草案请求 | 201，待确认动作 |
@@ -122,7 +123,7 @@
 | POST | `/api/admin/knowledge/documents/{documentVersionId}/disable` | 空 body | 200，停止参与新检索 |
 | GET | `/api/admin/agent-traces` | `requestId?`、`sessionId?`、分页 | 200，脱敏工具执行记录 |
 
-上传仅接受 UTF-8 的 `.md`、`.txt`。索引任务异步执行；客户端以文档列表中的 `indexStatus` 查看 `PENDING`、`INDEXING`、`SUCCEEDED`、`FAILED` 和失败原因。管理员修改实验室状态后应立即清理该实验室缓存。
+上传仅接受 UTF-8 的 `.md`、`.txt`。索引任务异步执行；客户端以文档列表中的 `indexStatus` 查看 `PENDING`、`INDEXING`、`SUCCEEDED`、`FAILED` 和失败原因。管理员修改实验室状态后在数据库事务提交后清理 `lab:detail:{labId}` 缓存；详情查询缓存未命中或 Redis 不可用时回源 MySQL。
 
 ## 独立 RAG 问答
 
@@ -155,4 +156,4 @@
 | POST | `/api/chat/sessions` | 已登录 | `{}` 或 `{name?}` | 201，绑定当前用户的 `sessionId` |
 | POST | `/api/chat/sessions/{sessionId}/messages` | 会话所有者 | `{"content":"我们 3 人下周三 14 点需要 GPU 实验室"}` | 200，一轮 Agent 结果 |
 
-消息响应 `data` 至少包含 `sessionId`、`messageId`、`answer`、`citations`、`toolCallCount`，并可包含上文的 `draft` 结构。系统最多执行 8 次工具调用；不返回模型思维链、完整工具参数、Redis Key 或向量记录 ID。聊天响应中没有可代替确认接口的 `confirmed=true` 字段。
+消息响应 `data` 至少包含 `sessionId`、`messageId`、`answer`、`citations`、`toolCallCount`，并可包含上文的 `draft` 结构。系统最多执行 8 次工具调用；不返回模型思维链、完整工具参数、Redis Key 或向量记录 ID。聊天响应中没有可代替确认接口的 `confirmed=true` 字段。每位用户每自然分钟最多发送 20 次消息，超限返回 429；Redis 不可用时聊天、草案和首次确认返回 50301。

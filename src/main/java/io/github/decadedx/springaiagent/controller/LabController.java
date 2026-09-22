@@ -6,6 +6,7 @@ import io.github.decadedx.springaiagent.dto.LabQueryDTO;
 import io.github.decadedx.springaiagent.service.LabService;
 import io.github.decadedx.springaiagent.vo.LabAvailabilityVO;
 import io.github.decadedx.springaiagent.vo.LabPageVO;
+import io.github.decadedx.springaiagent.vo.LabVO;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,6 +44,17 @@ public class LabController {
     @GetMapping
     public Result<LabPageVO> search(@Valid @ModelAttribute LabQueryDTO queryDTO) {
         return Result.success(labService.search(queryDTO));
+    }
+
+    /**
+     * 查询指定实验室的基础详情；缓存故障时仍由服务回源数据库。
+     *
+     * @param labId 实验室业务编号
+     * @return 实验室详情
+     */
+    @GetMapping("/{labId}")
+    public Result<LabVO> findDetail(@PathVariable String labId) {
+        return Result.success(labService.findDetail(labId));
     }
 
     /**

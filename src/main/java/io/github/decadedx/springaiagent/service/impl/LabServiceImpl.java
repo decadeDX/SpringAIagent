@@ -5,11 +5,15 @@ import io.github.decadedx.springaiagent.common.ApiCode;
 import io.github.decadedx.springaiagent.config.TimeConfig;
 import io.github.decadedx.springaiagent.dto.LabAvailabilityQueryDTO;
 import io.github.decadedx.springaiagent.dto.LabQueryDTO;
+import io.github.decadedx.springaiagent.dto.LabUpdateDTO;
 import io.github.decadedx.springaiagent.entity.Lab;
 import io.github.decadedx.springaiagent.enums.LabStatus;
 import io.github.decadedx.springaiagent.exception.BusinessException;
 import io.github.decadedx.springaiagent.mapper.LabMapper;
 import io.github.decadedx.springaiagent.mapper.ReservationSlotMapper;
+import io.github.decadedx.springaiagent.enums.UserRole;
+import io.github.decadedx.springaiagent.security.CurrentUser;
+import io.github.decadedx.springaiagent.service.LabDetailCache;
 import io.github.decadedx.springaiagent.service.LabService;
 import io.github.decadedx.springaiagent.vo.AvailabilitySlotVO;
 import io.github.decadedx.springaiagent.vo.LabAvailabilityVO;
@@ -17,6 +21,9 @@ import io.github.decadedx.springaiagent.vo.LabPageVO;
 import io.github.decadedx.springaiagent.vo.LabVO;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -46,6 +53,9 @@ public class LabServiceImpl implements LabService {
     /** 统一业务时钟，用于标记已经过去或超出预约窗口的时隙。 */
     private final Clock clock;
 
+    /** 实验室详情缓存。 */
+    private final LabDetailCache labDetailCache;
+
     /**
      * 创建实验室查询服务。
      *
@@ -53,10 +63,12 @@ public class LabServiceImpl implements LabService {
      * @param reservationSlotMapper 时隙 Mapper
      * @param clock 业务时钟
      */
-    public LabServiceImpl(LabMapper labMapper, ReservationSlotMapper reservationSlotMapper, Clock clock) {
+    public LabServiceImpl(LabMapper labMapper, ReservationSlotMapper reservationSlotMapper, Clock clock,
+                          LabDetailCache labDetailCache) {
         this.labMapper = labMapper;
         this.reservationSlotMapper = reservationSlotMapper;
         this.clock = clock;
+        this.labDetailCache = labDetailCache;
     }
 
     /**
@@ -75,6 +87,59 @@ public class LabServiceImpl implements LabService {
         int toIndex = Math.min(fromIndex + size, labs.size());
         List<LabVO> items = labs.subList(fromIndex, toIndex).stream().map(this::toVO).toList();
         return new LabPageVO(items, page, size, labs.size());
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public LabVO findDetail(String labId) {
+        return labDetailCache.get(labId).orElseGet(() -> {
+            LabVO detail = toVO(requireLab(labId));
+            labDetailCache.put(detail);
+            return detail;
+        });
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public LabVO update(String labId, LabUpdateDTO updateDTO) {
+        requireAdmin();
+        if (updateDTO == null || (updateDTO.name() == null && updateDTO.capacity() == null
+                && updateDTO.equipmentDescription() == null && updateDTO.openTime() == null
+                && updateDTO.closeTime() == null && updateDTO.status() == null)) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, ApiCode.BAD_REQUEST, "至少需要提供一个更新字段");
+        }
+        Lab lab = requireLab(labId);
+        if (updateDTO.name() != null) {
+            lab.setName(updateDTO.name().trim());
+        }
+        if (updateDTO.capacity() != null) {
+            lab.setCapacity(updateDTO.capacity());
+        }
+        if (updateDTO.equipmentDescription() != null) {
+            lab.setEquipmentDescription(updateDTO.equipmentDescription().trim());
+        }
+        if (updateDTO.openTime() != null) {
+            lab.setOpenTime(updateDTO.openTime());
+        }
+        if (updateDTO.closeTime() != null) {
+            lab.setCloseTime(updateDTO.closeTime());
+        }
+        if (updateDTO.status() != null) {
+            lab.setStatus(updateDTO.status());
+        }
+        if (lab.getName().isBlank() || lab.getEquipmentDescription().isBlank() || !lab.getOpenTime().isBefore(lab.getCloseTime())) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, ApiCode.BAD_REQUEST, "实验室名称、设备说明和开放时间不合法");
+        }
+        labMapper.updateById(lab);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            /** 数据库事务提交后才允许删除缓存。 */
+            @Override
+            public void afterCommit() {
+                labDetailCache.evict(labId);
+            }
+        });
+        return toVO(lab);
     }
 
     /**
@@ -127,6 +192,15 @@ public class LabServiceImpl implements LabService {
             throw new BusinessException(HttpStatus.NOT_FOUND, ApiCode.LAB_NOT_FOUND, "实验室不存在");
         }
         return lab;
+    }
+
+    /**
+     * 服务层再次确认管理员身份，避免内部调用绕过 Controller 门禁。
+     */
+    private void requireAdmin() {
+        if (CurrentUser.requireRole() != UserRole.ADMIN) {
+            throw new BusinessException(HttpStatus.FORBIDDEN, ApiCode.FORBIDDEN, "仅管理员可以修改实验室");
+        }
     }
 
     /**
