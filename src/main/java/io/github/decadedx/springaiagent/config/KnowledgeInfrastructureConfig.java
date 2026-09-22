@@ -1,11 +1,14 @@
 package io.github.decadedx.springaiagent.config;
 
 import io.github.decadedx.springaiagent.service.RagChatClient;
+import io.github.decadedx.springaiagent.service.AgentModelClient;
 import io.github.decadedx.springaiagent.service.KnowledgeVectorStore;
 import io.github.decadedx.springaiagent.service.impl.RedisKnowledgeVectorStore;
 import io.github.decadedx.springaiagent.service.impl.SpringAiRagChatClient;
 import io.github.decadedx.springaiagent.service.impl.UnavailableKnowledgeVectorStore;
 import io.github.decadedx.springaiagent.service.impl.UnavailableRagChatClient;
+import io.github.decadedx.springaiagent.service.impl.SpringAiAgentModelClient;
+import io.github.decadedx.springaiagent.service.impl.UnavailableAgentModelClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -67,6 +70,18 @@ public class KnowledgeInfrastructureConfig {
     }
 
     /**
+     * 创建支持受控工具调用的 Agent 模型适配器；仅在已显式启用真实 RAG/模型时装配。
+     *
+     * @param chatModel Spring AI 聊天模型
+     * @return Agent 模型适配器
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "knowledge", name = "rag-enabled", havingValue = "true")
+    public AgentModelClient springAiAgentModelClient(ChatModel chatModel) {
+        return new SpringAiAgentModelClient(chatModel);
+    }
+
+    /**
      * 在 RAG 未启用时提供明确失败的向量访问入口，而不回退到内存检索。
      *
      * @return 不可用向量存储实现
@@ -86,5 +101,16 @@ public class KnowledgeInfrastructureConfig {
     @ConditionalOnMissingBean(RagChatClient.class)
     public RagChatClient unavailableRagChatClient() {
         return new UnavailableRagChatClient();
+    }
+
+    /**
+     * 在模型未配置时阻止聊天请求伪装为成功。
+     *
+     * @return 明确失败的 Agent 适配器
+     */
+    @Bean
+    @ConditionalOnMissingBean(AgentModelClient.class)
+    public AgentModelClient unavailableAgentModelClient() {
+        return new UnavailableAgentModelClient();
     }
 }

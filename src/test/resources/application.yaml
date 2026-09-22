@@ -5,6 +5,8 @@ security:
     ttl: PT2H
 
 spring:
+  autoconfigure:
+    exclude: org.springframework.ai.vectorstore.redis.autoconfigure.RedisVectorStoreAutoConfiguration
   ai:
     model:
       chat: none
@@ -14,3 +16,5 @@ spring:
       audio:
         speech: none
         transcription: none
+    vectorstore:
+      type: none

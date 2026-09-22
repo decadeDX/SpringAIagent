@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { confirmCancellation, getMyReservations, prepareCancellation } from '../api/reservation'
+import { confirmAction } from '../api/action'
+import { getMyReservations, prepareCancellation } from '../api/reservation'
 import type { ActionDraft, Reservation } from '../types/api'
 
 const reservations = ref<Reservation[]>([])
 const draft = ref<ActionDraft>()
 const selectedReservation = ref<Reservation>()
 const loading = ref(true)
+const errorMessage = ref('')
 
 const activeReservations = computed(() => reservations.value.filter((item) => item.status === 'CONFIRMED'))
 
@@ -16,14 +18,25 @@ onMounted(async () => {
 })
 
 async function createCancellationDraft(reservation: Reservation) {
-  selectedReservation.value = reservation
-  draft.value = await prepareCancellation(reservation)
+  try {
+    errorMessage.value = ''
+    selectedReservation.value = reservation
+    draft.value = await prepareCancellation(reservation)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '无法创建取消草案'
+  }
 }
 
 async function confirm() {
-  if (!selectedReservation.value) return
-  await confirmCancellation(selectedReservation.value.id)
-  draft.value = undefined
+  if (!draft.value) return
+  try {
+    errorMessage.value = ''
+    await confirmAction(draft.value)
+    reservations.value = await getMyReservations()
+    draft.value = undefined
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '取消确认失败'
+  }
 }
 </script>
 
@@ -37,6 +50,7 @@ async function confirm() {
   </header>
 
   <section class="card table-card">
+    <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
     <div v-if="loading" class="empty-state">正在加载预约记录…</div>
     <table v-else>
       <thead><tr><th>预约编号</th><th>实验室</th><th>使用时间</th><th>人数</th><th>状态</th><th>操作</th></tr></thead>
@@ -59,6 +73,7 @@ async function confirm() {
       <h2>确认取消预约？</h2>
       <p>你即将取消 <strong>{{ selectedReservation.labName }}</strong> 于 {{ selectedReservation.startTime.slice(0, 16).replace('T', ' ') }} 的预约。</p>
       <p class="notice">确认时后端会再次校验预约归属和距离开始时间是否至少 30 分钟。</p>
+      <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
       <div class="modal-actions"><button class="secondary-button" @click="draft = undefined">返回</button><button class="danger-button" @click="confirm">确认取消</button></div>
     </section>
   </div>

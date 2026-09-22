@@ -1,10 +1,24 @@
 export type ActionType = 'CREATE_RESERVATION' | 'CANCEL_RESERVATION' | 'CREATE_REPAIR_TICKET'
 
 export interface ApiResponse<T> {
-  code: string
+  code: number
   message: string
   requestId: string
   data: T
+}
+
+export interface ActionExecution {
+  actionId: string
+  actionType: ActionType
+  executionStatus: 'SUCCEEDED'
+  idempotentReplay: boolean
+  result: Record<string, unknown>
+}
+
+export interface ChatSession {
+  sessionId: string
+  name?: string
+  createdAt: string
 }
 
 export interface ActionDraft {

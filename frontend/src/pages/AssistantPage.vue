@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { sendChatMessage } from '../api/chat'
+import { onMounted, ref } from 'vue'
+import { confirmAction } from '../api/action'
+import { createChatSession, sendChatMessage } from '../api/chat'
 import type { ActionDraft, Citation } from '../types/api'
 
 interface DisplayMessage {
@@ -16,6 +17,16 @@ const messages = ref<DisplayMessage[]>([
 const draft = ref<ActionDraft>()
 const sending = ref(false)
 const confirmed = ref(false)
+const sessionId = ref('')
+const errorMessage = ref('')
+
+onMounted(async () => {
+  try {
+    sessionId.value = (await createChatSession()).sessionId
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '无法创建聊天会话'
+  }
+})
 
 function formatTime(value: unknown) {
   return typeof value === 'string' ? value.replace('T', ' ').replace('+08:00', '') : String(value)
@@ -23,22 +34,33 @@ function formatTime(value: unknown) {
 
 async function send() {
   const content = input.value.trim()
-  if (!content || sending.value) return
+  if (!content || sending.value || !sessionId.value) return
   messages.value.push({ role: 'user', content })
   input.value = ''
   sending.value = true
+  errorMessage.value = ''
   try {
-    const response = await sendChatMessage(content)
+    const response = await sendChatMessage(sessionId.value, content)
     messages.value.push({ role: 'assistant', content: response.answer, citations: response.citations })
     draft.value = response.draft
     confirmed.value = false
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '助手请求失败'
   } finally {
     sending.value = false
   }
 }
 
-function confirmDraft() {
-  confirmed.value = true
+async function confirmDraft() {
+  if (!draft.value) return
+  errorMessage.value = ''
+  try {
+    const result = await confirmAction(draft.value)
+    confirmed.value = true
+    messages.value.push({ role: 'assistant', content: `操作已确认：${JSON.stringify(result.result)}` })
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '确认失败'
+  }
 }
 </script>
 
@@ -72,6 +94,7 @@ function confirmDraft() {
         <textarea v-model="input" rows="3" placeholder="例如：帮我预约下周二下午的 GPU 实验室" />
         <button class="primary-button" :disabled="sending">{{ sending ? '处理中…' : '发送' }}</button>
       </form>
+      <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
     </section>
 
     <aside class="draft-panel">

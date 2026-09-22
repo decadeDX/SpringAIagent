@@ -1,6 +1,5 @@
-import { createDraft, mockRepairs } from '../mocks/data'
 import type { ActionDraft, RepairTicket } from '../types/api'
-import { request, useMockApi } from './http'
+import { request } from './http'
 
 export interface RepairDraftInput {
   labId: string
@@ -9,10 +8,10 @@ export interface RepairDraftInput {
 }
 
 export async function getMyRepairTickets(): Promise<RepairTicket[]> {
-  return useMockApi ? mockRepairs : request<RepairTicket[]>('/repair-tickets/me')
+  const page = await request<{ items: RepairTicket[] }>('/repair-tickets/me')
+  return page.items
 }
 
 export async function prepareRepair(input: RepairDraftInput): Promise<ActionDraft> {
-  if (useMockApi) return createDraft('CREATE_REPAIR_TICKET', { ...input })
   return request<ActionDraft>('/repair-drafts', { method: 'POST', body: JSON.stringify(input) })
 }

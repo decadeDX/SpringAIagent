@@ -1,16 +1,35 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { confirmAction } from '../api/action'
 import { getMyRepairTickets, prepareRepair } from '../api/repair'
 import type { ActionDraft, RepairTicket } from '../types/api'
 
 const tickets = ref<RepairTicket[]>([])
 const draft = ref<ActionDraft>()
 const form = ref({ labId: 'LAB-B402', equipmentInfo: 'GPU-03', description: '开机后有焦糊味。' })
+const errorMessage = ref('')
 
 onMounted(async () => { tickets.value = await getMyRepairTickets() })
 
 async function createDraft() {
-  draft.value = await prepareRepair(form.value)
+  try {
+    errorMessage.value = ''
+    draft.value = await prepareRepair(form.value)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '无法创建报修草案'
+  }
+}
+
+async function confirm() {
+  if (!draft.value) return
+  try {
+    errorMessage.value = ''
+    await confirmAction(draft.value)
+    tickets.value = await getMyRepairTickets()
+    draft.value = undefined
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '报修确认失败'
+  }
 }
 </script>
 
@@ -31,8 +50,9 @@ async function createDraft() {
       <div v-if="draft" class="draft-preview">
         <strong>草案已生成</strong>
         <p>已识别安全风险。请停止使用设备，避免自行维修，并联系管理员。</p>
-        <button class="primary-button full-width">确认提交</button>
+        <button class="primary-button full-width" @click="confirm">确认提交</button>
       </div>
+      <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
     </section>
 
     <section class="card tickets-card">
