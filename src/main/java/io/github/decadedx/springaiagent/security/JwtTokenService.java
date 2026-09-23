@@ -46,9 +46,10 @@ public class JwtTokenService {
      *
      * @param userId 数据库用户主键
      * @param role 已验证的角色
+     * @param sessionId Redis 中唯一活动会话的随机标识
      * @return 令牌文本和到期时间
      */
-    public IssuedJwtToken issue(Long userId, UserRole role) {
+    public IssuedJwtToken issue(Long userId, UserRole role, String sessionId) {
         Instant issuedAt = Instant.now();
         Instant expiresAt = issuedAt.plus(jwtProperties.getTtl());
         JwtClaimsSet claims = JwtClaimsSet.builder()
@@ -57,6 +58,7 @@ public class JwtTokenService {
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .claim("role", role.name())
+                .claim("sid", sessionId)
                 .build();
         String token = jwtEncoder.encode(JwtEncoderParameters.from(
                 JwsHeader.with(MacAlgorithm.HS256).build(), claims)).getTokenValue();
@@ -75,7 +77,11 @@ public class JwtTokenService {
         try {
             Long userId = Long.valueOf(jwt.getSubject());
             UserRole role = UserRole.valueOf(jwt.getClaimAsString("role"));
-            return new AuthenticatedUser(userId, role);
+            String sessionId = jwt.getClaimAsString("sid");
+            if (sessionId == null || sessionId.isBlank()) {
+                throw new IllegalArgumentException("JWT 会话声明无效");
+            }
+            return new AuthenticatedUser(userId, role, sessionId);
         } catch (IllegalArgumentException | NullPointerException exception) {
             throw new JwtException("JWT 用户身份声明无效", exception);
         }

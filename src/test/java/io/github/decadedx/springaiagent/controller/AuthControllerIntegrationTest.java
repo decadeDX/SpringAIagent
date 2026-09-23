@@ -3,7 +3,9 @@ package io.github.decadedx.springaiagent.controller;
 import com.jayway.jsonpath.JsonPath;
 import io.github.decadedx.springaiagent.TestcontainersConfiguration;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
@@ -20,6 +22,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Set;
+
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(properties = "security.cors.allowed-origins=http://localhost:5173")
 @AutoConfigureMockMvc
@@ -27,6 +31,19 @@ class AuthControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    /** 用于隔离每个用例的 Redis 单账号会话。 */
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+    /** 每个用例开始前仅清理认证会话键，不影响其他 Redis 测试数据。 */
+    @BeforeEach
+    void clearUserSessions() {
+        Set<String> sessionKeys = stringRedisTemplate.keys("auth:session:*");
+        if (sessionKeys != null && !sessionKeys.isEmpty()) {
+            stringRedisTemplate.delete(sessionKeys);
+        }
+    }
 
     @Test
     void shouldLoginSeededStudentWithoutReturningPasswordHash() throws Exception {
@@ -54,6 +71,48 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.code").value(40100))
                 .andExpect(jsonPath("$.requestId").value(notNullValue()))
                 .andExpect(jsonPath("$.data").doesNotExist());
+    }
+
+    @Test
+    void shouldRejectSecondLoginForAnActiveAccount() throws Exception {
+        loginAndReadToken("student01", "student01");
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"student01\",\"password\":\"student01\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(40905));
+    }
+
+    @Test
+    void shouldAllowLoginAfterCurrentSessionLogsOut() throws Exception {
+        String token = loginAndReadToken("student01", "student01");
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"student01\",\"password\":\"student01\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldRejectRequestsWhoseRedisSessionIsMissing() throws Exception {
+        String token = loginAndReadToken("student01", "student01");
+        stringRedisTemplate.delete("auth:session:1");
+
+        mockMvc.perform(get("/api/auth/session")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(40101));
+
+        mockMvc.perform(get("/api/reservations/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(40101));
     }
 
     @Test

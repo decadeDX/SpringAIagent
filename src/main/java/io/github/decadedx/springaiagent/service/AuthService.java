@@ -15,4 +15,9 @@ public interface AuthService {
      * @return 令牌及不含敏感字段的用户摘要
      */
     LoginVO login(LoginDTO loginDTO);
+
+    /**
+     * 释放当前已认证账号的活动会话。
+     */
+    void logout();
 }

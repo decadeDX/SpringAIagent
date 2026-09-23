@@ -23,11 +23,12 @@ class JwtTokenServiceTest {
     void shouldIssueAndParseTrustedIdentity() {
         JwtTokenService service = createTokenService(Duration.ofHours(2));
 
-        IssuedJwtToken token = service.issue(3L, UserRole.ADMIN);
+        IssuedJwtToken token = service.issue(3L, UserRole.ADMIN, "session-3");
         AuthenticatedUser user = service.parse(token.value());
 
         assertEquals(3L, user.id());
         assertEquals(UserRole.ADMIN, user.role());
+        assertEquals("session-3", user.sessionId());
     }
 
     @Test
@@ -45,6 +46,7 @@ class JwtTokenServiceTest {
                         .issuedAt(now.minus(Duration.ofHours(2)))
                         .expiresAt(now.minus(Duration.ofHours(1)))
                         .claim("role", UserRole.STUDENT.name())
+                        .claim("sid", "expired-session")
                         .build())).getTokenValue();
 
         assertThrows(JwtException.class, () -> service.parse(token));

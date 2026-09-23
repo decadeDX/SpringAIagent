@@ -15,7 +15,7 @@
 
 ### `POST /api/auth/login`
 
-请求：`{"username":"student01","password":"<password>"}`。
+请求：`{"username":"student01","password":"<password>"}`。同一账号仅允许一个未过期会话；已有会话时返回 `40905`，必须先在原设备退出。
 
 成功响应 `200`：
 
@@ -32,6 +32,14 @@
   "requestId": "req_x"
 }
 ```
+
+### `POST /api/auth/logout`
+
+需要当前 Bearer Token。仅删除与该 Token 的 `sid` 匹配的 Redis 会话，成功后该账号可再次登录。
+
+### `GET /api/auth/session`
+
+需要当前 Bearer Token。用于前端每 30 秒的会话心跳；会话不存在或不匹配时返回 `40101`。
 
 ## 实验室与预约
 

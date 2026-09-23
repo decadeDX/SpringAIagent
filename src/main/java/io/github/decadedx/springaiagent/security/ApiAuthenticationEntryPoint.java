@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 /**
- * 将缺失或无效认证统一转换为不泄露令牌细节的 401 JSON 响应。
+ * 将认证或会话依赖失败统一转换为不泄露令牌细节的 JSON 响应。
  */
 @Component
 public class ApiAuthenticationEntryPoint implements AuthenticationEntryPoint {
@@ -45,6 +45,28 @@ public class ApiAuthenticationEntryPoint implements AuthenticationEntryPoint {
                          AuthenticationException authException) throws IOException, ServletException {
         writeResponse(response, HttpServletResponse.SC_UNAUTHORIZED,
                 Result.failure(ApiCode.UNAUTHENTICATED, "请先登录或重新登录"));
+    }
+
+    /**
+     * 返回会话已被释放或失效的统一 401 响应，供前端清理本地登录状态。
+     *
+     * @param response HTTP 响应
+     * @throws IOException 响应写入异常
+     */
+    public void commenceSessionInvalidated(HttpServletResponse response) throws IOException {
+        writeResponse(response, HttpServletResponse.SC_UNAUTHORIZED,
+                Result.failure(ApiCode.SESSION_INVALIDATED, "登录已失效，请重新登录"));
+    }
+
+    /**
+     * Redis 不可用时拒绝认证请求，避免绕过单账号会话校验。
+     *
+     * @param response HTTP 响应
+     * @throws IOException 响应写入异常
+     */
+    public void commenceRedisUnavailable(HttpServletResponse response) throws IOException {
+        writeResponse(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+                Result.failure(ApiCode.REDIS_UNAVAILABLE, "登录服务暂不可用，请稍后重试"));
     }
 
     /**

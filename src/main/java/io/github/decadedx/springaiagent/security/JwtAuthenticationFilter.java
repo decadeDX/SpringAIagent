@@ -1,5 +1,8 @@
 package io.github.decadedx.springaiagent.security;
 
+import io.github.decadedx.springaiagent.common.ApiCode;
+import io.github.decadedx.springaiagent.exception.BusinessException;
+import io.github.decadedx.springaiagent.service.UserSessionService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,7 +12,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.JwtException;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -32,18 +34,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenService jwtTokenService;
 
     /** 无效令牌时写出统一 401 的处理器。 */
-    private final AuthenticationEntryPoint authenticationEntryPoint;
+    private final ApiAuthenticationEntryPoint authenticationEntryPoint;
+
+    /** 校验每个账号唯一 Redis 会话的服务。 */
+    private final UserSessionService userSessionService;
 
     /**
      * 创建 JWT 认证过滤器。
      *
      * @param jwtTokenService JWT 服务
      * @param authenticationEntryPoint 认证失败处理器
+     * @param userSessionService Redis 用户会话服务
      */
     public JwtAuthenticationFilter(JwtTokenService jwtTokenService,
-                                   ApiAuthenticationEntryPoint authenticationEntryPoint) {
+                                   ApiAuthenticationEntryPoint authenticationEntryPoint,
+                                   UserSessionService userSessionService) {
         this.jwtTokenService = jwtTokenService;
         this.authenticationEntryPoint = authenticationEntryPoint;
+        this.userSessionService = userSessionService;
     }
 
     /**
@@ -66,6 +74,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             AuthenticatedUser user = jwtTokenService.parse(authorization.substring(BEARER_PREFIX.length()));
+            if (!userSessionService.isActive(user.id(), user.sessionId())) {
+                authenticationEntryPoint.commenceSessionInvalidated(response);
+                return;
+            }
             SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
             securityContext.setAuthentication(new UsernamePasswordAuthenticationToken(
                     user,
@@ -75,6 +87,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } catch (JwtException exception) {
             authenticationEntryPoint.commence(request, response, new InvalidJwtAuthenticationException(exception));
+        } catch (BusinessException exception) {
+            if (exception.getCode() == ApiCode.REDIS_UNAVAILABLE) {
+                authenticationEntryPoint.commenceRedisUnavailable(response);
+                return;
+            }
+            throw exception;
         }
     }
 

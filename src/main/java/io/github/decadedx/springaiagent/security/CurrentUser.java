@@ -34,6 +34,19 @@ public final class CurrentUser {
     }
 
     /**
+     * 返回当前 HTTP 会话的随机标识；仅认证接口用于精确释放 Redis 会话。
+     *
+     * @return 已验证 JWT 中的会话标识
+     */
+    public static String requireSessionId() {
+        String sessionId = requireAuthenticatedUser().sessionId();
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new BusinessException(HttpStatus.UNAUTHORIZED, ApiCode.UNAUTHENTICATED, "请先登录");
+        }
+        return sessionId;
+    }
+
+    /**
      * 从 Spring Security 上下文提取由 JWT 过滤器创建的最小身份。
      *
      * @return 已认证用户

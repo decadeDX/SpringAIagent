@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+import { request, useMockApi } from './api/http'
+import { accessToken, clearSession, role, SESSION_STORAGE_KEY, sessionExpired, synchronizeSession, trainingStatus, username } from './session'
 
 const route = useRoute()
 const router = useRouter()
 const isLoginPage = computed(() => route.name === 'login')
 const isAdminArea = computed(() => route.meta.area === 'admin')
-const username = computed(() => localStorage.getItem('username') ?? '当前用户')
-const role = computed(() => localStorage.getItem('userRole') ?? 'STUDENT')
-const trainingStatus = computed(() => localStorage.getItem('trainingStatus') ?? 'PENDING')
 const accountMenuOpen = ref(false)
+const logoutErrorMessage = ref('')
+let sessionCheckTimer: ReturnType<typeof setInterval> | undefined
 
 const studentNavigation = [
   { name: 'assistant', label: '智能助手', icon: '✦' },
@@ -24,14 +25,59 @@ const adminNavigation = [
 const navigation = computed(() => isAdminArea.value ? adminNavigation : studentNavigation)
 const accountDescription = computed(() => role.value === 'ADMIN' ? '管理员账户' : trainingStatus.value === 'PASSED' ? '已通过安全培训' : '未通过安全培训')
 
-function logout() {
-  localStorage.removeItem('accessToken')
-  localStorage.removeItem('username')
-  localStorage.removeItem('userRole')
-  localStorage.removeItem('trainingStatus')
-  accountMenuOpen.value = false
-  router.push({ name: 'login' })
+function homeRoute() {
+  return { name: role.value === 'ADMIN' ? 'admin' : 'assistant' }
 }
+
+function stopSessionCheck() {
+  if (sessionCheckTimer) clearInterval(sessionCheckTimer)
+  sessionCheckTimer = undefined
+}
+
+function startSessionCheck() {
+  stopSessionCheck()
+  if (useMockApi || !accessToken.value) return
+  sessionCheckTimer = setInterval(() => {
+    void request<void>('/auth/session').catch(() => undefined)
+  }, 30_000)
+}
+
+function handleStorage(event: StorageEvent) {
+  if (event.key !== SESSION_STORAGE_KEY && event.key !== null) return
+  synchronizeSession()
+  accountMenuOpen.value = false
+  logoutErrorMessage.value = ''
+  void router.replace(accessToken.value ? homeRoute() : { name: 'login' })
+}
+
+async function logout() {
+  logoutErrorMessage.value = ''
+  try {
+    if (!useMockApi) await request<void>('/auth/logout', { method: 'POST' })
+    clearSession()
+    accountMenuOpen.value = false
+    await router.push({ name: 'login' })
+  } catch (error) {
+    logoutErrorMessage.value = error instanceof Error ? error.message : '退出登录失败，请稍后重试'
+  }
+}
+
+watch(accessToken, (token, previousToken) => {
+  if (token) {
+    startSessionCheck()
+    return
+  }
+  stopSessionCheck()
+  if (previousToken && route.name !== 'login') {
+    void router.push({ name: 'login', query: sessionExpired.value ? { reason: 'session-expired' } : {} })
+  }
+}, { immediate: true })
+
+onMounted(() => window.addEventListener('storage', handleStorage))
+onBeforeUnmount(() => {
+  window.removeEventListener('storage', handleStorage)
+  stopSessionCheck()
+})
 </script>
 
 <template>
@@ -69,6 +115,7 @@ function logout() {
           <div v-if="accountMenuOpen" class="account-dropdown">
             <strong>{{ username }}</strong>
             <small>{{ accountDescription }}</small>
+            <p v-if="logoutErrorMessage" class="form-error">{{ logoutErrorMessage }}</p>
             <button class="text-button" @click="logout">退出登录</button>
           </div>
         </div>

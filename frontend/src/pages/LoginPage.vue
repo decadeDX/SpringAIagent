@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { login } from '../api/auth'
+import { updateSession } from '../session'
 
 const router = useRouter()
+const route = useRoute()
 const username = ref('student01')
 const password = ref('student01')
-const errorMessage = ref('')
+const errorMessage = ref(route.query.reason === 'session-expired' ? '登录已失效，请重新登录' : '')
 const submitting = ref(false)
 
 async function submit() {
@@ -14,10 +16,7 @@ async function submit() {
   submitting.value = true
   try {
     const result = await login(username.value, password.value)
-    localStorage.setItem('accessToken', result.accessToken)
-    localStorage.setItem('username', result.user.username)
-    localStorage.setItem('userRole', result.user.role)
-    localStorage.setItem('trainingStatus', result.user.trainingStatus)
+    updateSession(result)
     await router.push({ name: result.user.role === 'ADMIN' ? 'admin' : 'assistant' })
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '登录失败，请稍后重试'

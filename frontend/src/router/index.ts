@@ -4,6 +4,7 @@ import AssistantPage from '../pages/AssistantPage.vue'
 import LoginPage from '../pages/LoginPage.vue'
 import RepairsPage from '../pages/RepairsPage.vue'
 import ReservationsPage from '../pages/ReservationsPage.vue'
+import { accessToken, role } from '../session'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -18,12 +19,12 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const token = localStorage.getItem('accessToken')
-  const role = localStorage.getItem('userRole')
+  const token = accessToken.value
+  const currentRole = role.value
 
-  if (to.name === 'login' && token) return { name: role === 'ADMIN' ? 'admin' : 'assistant' }
+  if (to.name === 'login' && token) return { name: currentRole === 'ADMIN' ? 'admin' : 'assistant' }
   if (to.meta.requiresAuth && !token) return { name: 'login' }
-  if (to.meta.requiresAdmin && role !== 'ADMIN') return { name: 'assistant' }
+  if (to.meta.requiresAdmin && currentRole !== 'ADMIN') return { name: 'assistant' }
   return true
 })
 

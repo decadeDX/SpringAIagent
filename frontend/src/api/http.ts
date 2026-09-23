@@ -1,9 +1,10 @@
 import type { ApiResponse } from '../types/api'
+import { accessToken, invalidateSession } from '../session'
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('accessToken')
+  const token = accessToken.value
   const response = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers: {
@@ -13,6 +14,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     },
   })
   const body = (await response.json()) as ApiResponse<T>
+  if (response.status === 401) invalidateSession()
   if (!response.ok) throw new Error(body.message)
   return body.data
 }
