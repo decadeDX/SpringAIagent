@@ -83,7 +83,7 @@ export interface ChatMessage {
 }
 
 export interface KnowledgeDocument {
-  id: number
+  id: string
   logicalDocumentCode: string
   title: string
   version: string

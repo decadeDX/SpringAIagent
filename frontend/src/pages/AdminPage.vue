@@ -20,6 +20,16 @@ const uploadFile = ref<File>()
 const uploadForm = ref({ logicalDocumentCode: '', title: '', version: 'v1.0', effectiveAt: localDateTime() })
 const loading = ref(true)
 const errorMessage = ref('')
+const publishErrorMessage = ref('')
+
+const logicalDocumentOptions = [
+  { code: '01', label: '实验室预约管理办法' },
+  { code: '02', label: '人工智能实验室使用指南' },
+  { code: '03', label: '嵌入式实验室安全规范' },
+  { code: '04', label: '设备报修操作指南' },
+  { code: '05', label: '软件工程实验室使用指南' },
+  { code: '06', label: '常见问题汇编' },
+]
 
 function localDateTime() {
   const now = new Date()
@@ -65,7 +75,9 @@ async function processTicket(ticket: RepairTicket) {
 }
 
 function selectUploadFile(event: Event) {
-  uploadFile.value = (event.target as HTMLInputElement).files?.[0]
+  const file = (event.target as HTMLInputElement).files?.[0]
+  uploadFile.value = file
+  if (file) uploadForm.value.title = file.name.replace(/\.[^.]+$/, '')
 }
 
 async function uploadDocument() {
@@ -84,17 +96,17 @@ async function uploadDocument() {
   }
 }
 
-async function publishDocument(id: number) {
+async function publishDocument(id: string) {
   try {
-    errorMessage.value = ''
+    publishErrorMessage.value = ''
     const updated = await publishKnowledgeDocument(id)
     documents.value = documents.value.map((item) => item.id === updated.id ? updated : item)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '无法发布文档'
+    publishErrorMessage.value = error instanceof Error ? error.message : '无法发布文档'
   }
 }
 
-async function disableDocument(id: number) {
+async function disableDocument(id: string) {
   try {
     errorMessage.value = ''
     const updated = await disableKnowledgeDocument(id)
@@ -116,12 +128,17 @@ onMounted(load)
   <div v-if="loading" class="empty-state">正在加载管理数据…</div>
 
   <div v-else class="admin-grid">
-    <section class="card">
+    <section class="card lab-status-card">
       <h2>实验室状态</h2>
-      <template v-for="lab in labs" :key="lab.id">
-        <div class="setting-row"><span><strong>{{ lab.id }}</strong><small>{{ lab.name }}</small></span><span class="status-badge" :class="lab.status === 'ACTIVE' ? 'online' : 'cancelled'">{{ lab.status === 'ACTIVE' ? '正常开放' : lab.status === 'MAINTENANCE' ? '维护中' : '已停用' }}</span></div>
-        <button class="secondary-button" :disabled="lab.status === 'DISABLED'" @click="toggleLabStatus(lab)">切换为{{ lab.status === 'ACTIVE' ? '维护中' : '正常开放' }}</button>
-      </template>
+      <div class="lab-status-viewport">
+        <div class="lab-status-list">
+          <div v-for="lab in labs" :key="lab.id" class="lab-status-item">
+            <span><strong>{{ lab.id }}</strong><small>{{ lab.name }}</small></span>
+            <span class="status-badge" :class="lab.status === 'ACTIVE' ? 'online' : 'cancelled'">{{ lab.status === 'ACTIVE' ? '正常开放' : lab.status === 'MAINTENANCE' ? '维护中' : '已停用' }}</span>
+            <button class="secondary-button" :disabled="lab.status === 'DISABLED'" @click="toggleLabStatus(lab)">切换为{{ lab.status === 'ACTIVE' ? '维护中' : '正常开放' }}</button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="card">
@@ -142,7 +159,12 @@ onMounted(load)
     <h2>上传知识文档</h2>
     <form @submit.prevent="uploadDocument">
       <label>源文件<input type="file" accept=".md,.txt,text/markdown,text/plain" @change="selectUploadFile" /></label>
-      <label>逻辑文档编号<input v-model="uploadForm.logicalDocumentCode" required /></label>
+      <label>逻辑文档编号
+        <select v-model="uploadForm.logicalDocumentCode" required>
+          <option disabled value="">请选择文档编号</option>
+          <option v-for="option in logicalDocumentOptions" :key="option.code" :value="option.code">{{ option.code }} · {{ option.label }}</option>
+        </select>
+      </label>
       <label>文档标题<input v-model="uploadForm.title" required /></label>
       <label>版本<input v-model="uploadForm.version" required /></label>
       <label>生效时间<input v-model="uploadForm.effectiveAt" type="datetime-local" required /></label>
@@ -165,4 +187,12 @@ onMounted(load)
       </tbody>
     </table>
   </section>
+
+  <div v-if="publishErrorMessage" class="modal-backdrop" @click.self="publishErrorMessage = ''">
+    <section class="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="publish-error-title">
+      <h2 id="publish-error-title">发布失败</h2>
+      <p>{{ publishErrorMessage }}</p>
+      <div class="modal-actions"><button class="primary-button" @click="publishErrorMessage = ''">知道了</button></div>
+    </section>
+  </div>
 </template>

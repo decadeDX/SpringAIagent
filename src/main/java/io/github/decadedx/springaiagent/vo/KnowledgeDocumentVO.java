@@ -1,6 +1,8 @@
 package io.github.decadedx.springaiagent.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.github.decadedx.springaiagent.enums.KnowledgeIndexStatus;
 import io.github.decadedx.springaiagent.enums.KnowledgePublishStatus;
 
@@ -21,7 +23,8 @@ import java.util.List;
  * @param chunkCount 已持久化的分块数
  * @param indexFailureReason 最近索引失败原因
  */
-public record KnowledgeDocumentVO(Long id, String logicalDocumentCode, String version, String title,
+public record KnowledgeDocumentVO(@JsonSerialize(using = ToStringSerializer.class) Long id,
+                                  String logicalDocumentCode, String version, String title,
                                   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX") OffsetDateTime effectiveAt,
                                   List<String> applicableLabIds, KnowledgePublishStatus publishStatus,
                                   KnowledgeIndexStatus indexStatus, int chunkCount, String indexFailureReason) {

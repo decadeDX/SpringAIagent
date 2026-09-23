@@ -816,7 +816,7 @@ components:
       type: object
       required: [id, logicalDocumentCode, version, title, effectiveAt, publishStatus, indexStatus, chunkCount]
       properties:
-        id: { type: integer, format: int64 }
+        id: { type: string, description: 文档版本主键，以字符串传输以避免 JavaScript 精度丢失 }
         logicalDocumentCode: { type: string }
         version: { type: string }
         title: { type: string }

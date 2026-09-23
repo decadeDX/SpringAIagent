@@ -47,10 +47,10 @@ export async function uploadKnowledgeDocument(input: {
   return request<KnowledgeDocument>('/admin/knowledge/documents', { method: 'POST', body: formData })
 }
 
-export async function publishKnowledgeDocument(documentId: number): Promise<KnowledgeDocument> {
+export async function publishKnowledgeDocument(documentId: string): Promise<KnowledgeDocument> {
   return request<KnowledgeDocument>(`/admin/knowledge/documents/${documentId}/publish`, { method: 'POST' })
 }
 
-export async function disableKnowledgeDocument(documentId: number): Promise<KnowledgeDocument> {
+export async function disableKnowledgeDocument(documentId: string): Promise<KnowledgeDocument> {
   return request<KnowledgeDocument>(`/admin/knowledge/documents/${documentId}/disable`, { method: 'POST' })
 }
