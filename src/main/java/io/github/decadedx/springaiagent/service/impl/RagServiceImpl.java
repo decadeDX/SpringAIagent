@@ -1,6 +1,7 @@
 package io.github.decadedx.springaiagent.service.impl;
 
 import io.github.decadedx.springaiagent.common.ApiCode;
+import io.github.decadedx.springaiagent.common.ApplicationMetrics;
 import io.github.decadedx.springaiagent.dto.KnowledgeQuestionDTO;
 import io.github.decadedx.springaiagent.exception.BusinessException;
 import io.github.decadedx.springaiagent.mapper.KnowledgeDocumentMapper;
@@ -61,6 +62,9 @@ public class RagServiceImpl implements RagService {
     /** 模型结构化 JSON 解析器。 */
     private final ObjectMapper objectMapper;
 
+    /** RAG 拒答指标。 */
+    private final ApplicationMetrics applicationMetrics;
+
     /**
      * 创建独立 RAG 问答服务。
      *
@@ -70,16 +74,19 @@ public class RagServiceImpl implements RagService {
      * @param knowledgeAnswerCache 公开问答缓存
      * @param citationValidator 引用校验器
      * @param objectMapper JSON 解析器
+     * @param applicationMetrics RAG 指标
      */
     public RagServiceImpl(KnowledgeDocumentMapper knowledgeDocumentMapper, KnowledgeVectorStore knowledgeVectorStore,
                           RagChatClient ragChatClient, KnowledgeAnswerCache knowledgeAnswerCache,
-                          CitationValidator citationValidator, ObjectMapper objectMapper) {
+                          CitationValidator citationValidator, ObjectMapper objectMapper,
+                          ApplicationMetrics applicationMetrics) {
         this.knowledgeDocumentMapper = knowledgeDocumentMapper;
         this.knowledgeVectorStore = knowledgeVectorStore;
         this.ragChatClient = ragChatClient;
         this.knowledgeAnswerCache = knowledgeAnswerCache;
         this.citationValidator = citationValidator;
         this.objectMapper = objectMapper;
+        this.applicationMetrics = applicationMetrics;
     }
 
     /**
@@ -197,6 +204,7 @@ public class RagServiceImpl implements RagService {
      * @return 固定拒答响应
      */
     private RagAnswerVO refusal(long retrievalMs, int hitCount) {
+        applicationMetrics.ragInsufficientEvidence();
         return new RagAnswerVO(INSUFFICIENT_KNOWLEDGE_ANSWER, List.of(),
                 new RagRetrievalVO(TOP_K, hitCount, retrievalMs));
     }

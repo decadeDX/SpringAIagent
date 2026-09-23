@@ -1,6 +1,7 @@
 package io.github.decadedx.springaiagent.service.impl;
 
 import io.github.decadedx.springaiagent.common.ApiCode;
+import io.github.decadedx.springaiagent.common.ApplicationMetrics;
 import io.github.decadedx.springaiagent.enums.UserRole;
 import io.github.decadedx.springaiagent.exception.BusinessException;
 import io.github.decadedx.springaiagent.security.AuthenticatedUser;
@@ -11,6 +12,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -43,7 +45,8 @@ class RedisChatRateLimiterTest {
         when(redisTemplate.execute(ArgumentMatchers.<RedisScript<Long>>any(), ArgumentMatchers.<List<String>>any(),
                 ArgumentMatchers.<Object>any())).thenReturn(21L);
         RedisChatRateLimiter limiter = new RedisChatRateLimiter(redisTemplate,
-                Clock.fixed(Instant.parse("2026-09-22T00:00:00Z"), ZoneOffset.UTC));
+                Clock.fixed(Instant.parse("2026-09-22T00:00:00Z"), ZoneOffset.UTC),
+                new ApplicationMetrics(new SimpleMeterRegistry()));
 
         assertThatThrownBy(limiter::check)
                 .isInstanceOf(BusinessException.class)
@@ -62,7 +65,8 @@ class RedisChatRateLimiterTest {
                 .execute(ArgumentMatchers.<RedisScript<Long>>any(), ArgumentMatchers.<List<String>>any(),
                         ArgumentMatchers.<Object>any());
         RedisChatRateLimiter limiter = new RedisChatRateLimiter(redisTemplate,
-                Clock.fixed(Instant.parse("2026-09-22T00:00:00Z"), ZoneOffset.UTC));
+                Clock.fixed(Instant.parse("2026-09-22T00:00:00Z"), ZoneOffset.UTC),
+                new ApplicationMetrics(new SimpleMeterRegistry()));
 
         assertThatThrownBy(limiter::check)
                 .isInstanceOf(BusinessException.class)

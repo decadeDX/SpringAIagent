@@ -1,6 +1,7 @@
 package io.github.decadedx.springaiagent.service.impl;
 
 import io.github.decadedx.springaiagent.dto.KnowledgeQuestionDTO;
+import io.github.decadedx.springaiagent.common.ApplicationMetrics;
 import io.github.decadedx.springaiagent.enums.UserRole;
 import io.github.decadedx.springaiagent.mapper.KnowledgeDocumentMapper;
 import io.github.decadedx.springaiagent.security.AuthenticatedUser;
@@ -16,6 +17,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
@@ -83,7 +85,7 @@ class RagServiceImplTest {
     private RagServiceImpl service(KnowledgeDocumentMapper documentMapper, KnowledgeVectorStore vectorStore,
                                    RagChatClient chatClient, KnowledgeAnswerCache answerCache) {
         return new RagServiceImpl(documentMapper, vectorStore, chatClient, answerCache, new CitationValidator(),
-                new ObjectMapper());
+                new ObjectMapper(), new ApplicationMetrics(new SimpleMeterRegistry()));
     }
 
     private void authenticate() {

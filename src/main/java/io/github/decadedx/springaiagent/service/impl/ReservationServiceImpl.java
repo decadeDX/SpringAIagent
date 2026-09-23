@@ -2,6 +2,7 @@ package io.github.decadedx.springaiagent.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import io.github.decadedx.springaiagent.common.ApiCode;
+import io.github.decadedx.springaiagent.common.ApplicationMetrics;
 import io.github.decadedx.springaiagent.config.TimeConfig;
 import io.github.decadedx.springaiagent.dto.ReservationCancelPayload;
 import io.github.decadedx.springaiagent.dto.ReservationCreatePayload;
@@ -69,6 +70,9 @@ public class ReservationServiceImpl implements ReservationService {
     /** 统一业务时钟，生产环境使用上海当前时刻，测试可固定。 */
     private final Clock clock;
 
+    /** 预约冲突指标。 */
+    private final ApplicationMetrics applicationMetrics;
+
     /**
      * 创建预约领域服务。
      *
@@ -77,15 +81,17 @@ public class ReservationServiceImpl implements ReservationService {
      * @param reservationSlotMapper 时隙 Mapper
      * @param sysUserMapper 用户 Mapper
      * @param clock 业务时钟
+     * @param applicationMetrics 预约指标
      */
     public ReservationServiceImpl(LabMapper labMapper, ReservationMapper reservationMapper,
                                   ReservationSlotMapper reservationSlotMapper, SysUserMapper sysUserMapper,
-                                  Clock clock) {
+                                  Clock clock, ApplicationMetrics applicationMetrics) {
         this.labMapper = labMapper;
         this.reservationMapper = reservationMapper;
         this.reservationSlotMapper = reservationSlotMapper;
         this.sysUserMapper = sysUserMapper;
         this.clock = clock;
+        this.applicationMetrics = applicationMetrics;
     }
 
     /**
@@ -131,6 +137,7 @@ public class ReservationServiceImpl implements ReservationService {
         try {
             reservationSlotMapper.insertBatch(createSlots(reservation, payload.startTime(), payload.endTime()));
         } catch (DuplicateKeyException exception) {
+            applicationMetrics.reservationConflict();
             throw new BusinessException(HttpStatus.CONFLICT, ApiCode.RESERVATION_CONFLICT,
                     "该实验室在指定时段已被预约，请重新选择");
         }

@@ -2,6 +2,7 @@ package io.github.decadedx.springaiagent.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import io.github.decadedx.springaiagent.common.ApiCode;
+import io.github.decadedx.springaiagent.common.ApplicationMetrics;
 import io.github.decadedx.springaiagent.dto.ActionConfirmDTO;
 import io.github.decadedx.springaiagent.dto.RepairTicketCreatePayload;
 import io.github.decadedx.springaiagent.dto.ReservationCancelPayload;
@@ -58,6 +59,9 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
     /** 失败状态独立记录事务模板。 */
     private final TransactionTemplate failureTransactionTemplate;
 
+    /** 动作幂等重放指标。 */
+    private final ApplicationMetrics applicationMetrics;
+
     /**
      * 创建动作确认服务。
      *
@@ -67,13 +71,15 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
      * @param repairTicketService 报修服务
      * @param objectMapper JSON 转换器
      * @param transactionManager 数据库事务管理器
+     * @param applicationMetrics 动作执行指标
      */
     public ActionConfirmationServiceImpl(ActionExecutionMapper actionExecutionMapper,
                                          ActionDraftService actionDraftService,
                                          ReservationService reservationService,
                                          RepairTicketService repairTicketService,
                                          ObjectMapper objectMapper,
-                                         PlatformTransactionManager transactionManager) {
+                                         PlatformTransactionManager transactionManager,
+                                         ApplicationMetrics applicationMetrics) {
         this.actionExecutionMapper = actionExecutionMapper;
         this.actionDraftService = actionDraftService;
         this.reservationService = reservationService;
@@ -82,6 +88,7 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.failureTransactionTemplate = new TransactionTemplate(transactionManager);
         this.failureTransactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        this.applicationMetrics = applicationMetrics;
     }
 
     /** {@inheritDoc} */
@@ -208,6 +215,7 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
             throw expired();
         }
         if (execution.getExecutionStatus() == ActionExecutionStatus.SUCCEEDED) {
+            applicationMetrics.actionIdempotentReplay();
             return new ActionExecutionVO(execution.getActionId(), execution.getActionType(),
                     ActionExecutionStatus.SUCCEEDED, true, readMap(execution.getResultSummary()));
         }

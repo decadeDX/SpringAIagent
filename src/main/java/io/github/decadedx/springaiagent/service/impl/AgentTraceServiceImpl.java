@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.github.decadedx.springaiagent.common.RequestIdContext;
+import io.github.decadedx.springaiagent.common.SensitiveDataSanitizer;
 import io.github.decadedx.springaiagent.config.TimeConfig;
 import io.github.decadedx.springaiagent.dto.AgentTraceQueryDTO;
 import io.github.decadedx.springaiagent.entity.AgentTrace;
@@ -26,13 +27,18 @@ public class AgentTraceServiceImpl implements AgentTraceService {
     /** 审计数据访问入口。 */
     private final AgentTraceMapper agentTraceMapper;
 
+    /** 审计字段脱敏器。 */
+    private final SensitiveDataSanitizer sensitiveDataSanitizer;
+
     /**
      * 创建审计服务。
      *
      * @param agentTraceMapper 审计 Mapper
+     * @param sensitiveDataSanitizer 审计字段脱敏器
      */
-    public AgentTraceServiceImpl(AgentTraceMapper agentTraceMapper) {
+    public AgentTraceServiceImpl(AgentTraceMapper agentTraceMapper, SensitiveDataSanitizer sensitiveDataSanitizer) {
         this.agentTraceMapper = agentTraceMapper;
+        this.sensitiveDataSanitizer = sensitiveDataSanitizer;
     }
 
     /** {@inheritDoc} */
@@ -45,8 +51,8 @@ public class AgentTraceServiceImpl implements AgentTraceService {
         trace.setSessionId(sessionId);
         trace.setUserId(CurrentUser.requireId());
         trace.setToolName(toolName);
-        trace.setRedactedArguments(redactedArguments);
-        trace.setResultSummary(resultSummary);
+        trace.setRedactedArguments(sensitiveDataSanitizer.sanitizeAuditText(redactedArguments));
+        trace.setResultSummary(sensitiveDataSanitizer.sanitizeAuditText(resultSummary));
         trace.setDurationMs(Math.max(0, durationMs));
         trace.setErrorCode(errorCode);
         agentTraceMapper.insert(trace);

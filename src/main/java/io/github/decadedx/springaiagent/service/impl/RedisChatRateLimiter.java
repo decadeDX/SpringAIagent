@@ -1,6 +1,7 @@
 package io.github.decadedx.springaiagent.service.impl;
 
 import io.github.decadedx.springaiagent.common.ApiCode;
+import io.github.decadedx.springaiagent.common.ApplicationMetrics;
 import io.github.decadedx.springaiagent.exception.BusinessException;
 import io.github.decadedx.springaiagent.security.CurrentUser;
 import io.github.decadedx.springaiagent.service.ChatRateLimiter;
@@ -39,15 +40,21 @@ public class RedisChatRateLimiter implements ChatRateLimiter {
     /** 业务时钟。 */
     private final Clock clock;
 
+    /** 聊天限流指标。 */
+    private final ApplicationMetrics applicationMetrics;
+
     /**
      * 创建 Redis 聊天限流器。
      *
      * @param stringRedisTemplate Redis 字符串模板
      * @param clock 业务时钟
+     * @param applicationMetrics 聊天限流指标
      */
-    public RedisChatRateLimiter(StringRedisTemplate stringRedisTemplate, Clock clock) {
+    public RedisChatRateLimiter(StringRedisTemplate stringRedisTemplate, Clock clock,
+                                ApplicationMetrics applicationMetrics) {
         this.stringRedisTemplate = stringRedisTemplate;
         this.clock = clock;
+        this.applicationMetrics = applicationMetrics;
     }
 
     /** {@inheritDoc} */
@@ -61,6 +68,7 @@ public class RedisChatRateLimiter implements ChatRateLimiter {
                 throw redisUnavailable();
             }
             if (count > LIMIT) {
+                applicationMetrics.chatRateLimited();
                 throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS, ApiCode.RATE_LIMITED,
                         "聊天请求过于频繁，请稍后再试");
             }

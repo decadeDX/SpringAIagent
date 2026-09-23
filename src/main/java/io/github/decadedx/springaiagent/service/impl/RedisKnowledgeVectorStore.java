@@ -1,5 +1,6 @@
 package io.github.decadedx.springaiagent.service.impl;
 
+import io.github.decadedx.springaiagent.common.ApplicationMetrics;
 import io.github.decadedx.springaiagent.service.KnowledgeVectorDocument;
 import io.github.decadedx.springaiagent.service.KnowledgeVectorStore;
 import org.springframework.ai.document.Document;
@@ -19,13 +20,18 @@ public class RedisKnowledgeVectorStore implements KnowledgeVectorStore {
     /** Spring AI 提供的 Redis Stack 向量访问入口。 */
     private final VectorStore vectorStore;
 
+    /** 向量与 Embedding 操作耗时指标。 */
+    private final ApplicationMetrics applicationMetrics;
+
     /**
      * 创建 Redis Stack 向量适配器。
      *
      * @param vectorStore Spring AI 向量存储
+     * @param applicationMetrics 向量与 Embedding 指标
      */
-    public RedisKnowledgeVectorStore(VectorStore vectorStore) {
+    public RedisKnowledgeVectorStore(VectorStore vectorStore, ApplicationMetrics applicationMetrics) {
         this.vectorStore = vectorStore;
+        this.applicationMetrics = applicationMetrics;
     }
 
     /**
@@ -33,9 +39,14 @@ public class RedisKnowledgeVectorStore implements KnowledgeVectorStore {
      */
     @Override
     public void add(List<KnowledgeVectorDocument> documents) {
-        vectorStore.add(documents.stream()
-                .map(document -> new Document(document.vectorRecordId(), document.content(), document.metadata()))
-                .toList());
+        long startedAt = System.nanoTime();
+        try {
+            vectorStore.add(documents.stream()
+                    .map(document -> new Document(document.vectorRecordId(), document.content(), document.metadata()))
+                    .toList());
+        } finally {
+            applicationMetrics.embeddingOperation(System.nanoTime() - startedAt);
+        }
     }
 
     /**
@@ -66,9 +77,14 @@ public class RedisKnowledgeVectorStore implements KnowledgeVectorStore {
                 .similarityThreshold(similarityThreshold)
                 .filterExpression("documentId in [" + values + "]")
                 .build();
-        return vectorStore.similaritySearch(request).stream()
-                .map(document -> new KnowledgeVectorDocument(document.getId(), document.getText(),
-                        Map.copyOf(document.getMetadata())))
-                .toList();
+        long startedAt = System.nanoTime();
+        try {
+            return vectorStore.similaritySearch(request).stream()
+                    .map(document -> new KnowledgeVectorDocument(document.getId(), document.getText(),
+                            Map.copyOf(document.getMetadata())))
+                    .toList();
+        } finally {
+            applicationMetrics.embeddingOperation(System.nanoTime() - startedAt);
+        }
     }
 }

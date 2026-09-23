@@ -1,6 +1,7 @@
 package io.github.decadedx.springaiagent.service;
 
 import io.github.decadedx.springaiagent.common.ApiCode;
+import io.github.decadedx.springaiagent.common.ApplicationMetrics;
 import io.github.decadedx.springaiagent.dto.KnowledgeQuestionDTO;
 import io.github.decadedx.springaiagent.dto.LabAvailabilityQueryDTO;
 import io.github.decadedx.springaiagent.dto.LabQueryDTO;
@@ -53,6 +54,9 @@ public class LabAssistantTools {
     /** 脱敏工具调用审计服务。 */
     private final AgentTraceService agentTraceService;
 
+    /** Agent 工具失败指标。 */
+    private final ApplicationMetrics applicationMetrics;
+
     /**
      * 创建受控工具集合。
      *
@@ -63,10 +67,12 @@ public class LabAssistantTools {
      * @param actionDraftService 草案服务
      * @param agentCallContext Agent 上下文
      * @param agentTraceService 审计服务
+     * @param applicationMetrics Agent 工具指标
      */
     public LabAssistantTools(RagService ragService, LabService labService, ReservationService reservationService,
                              RepairTicketService repairTicketService, ActionDraftService actionDraftService,
-                             AgentCallContext agentCallContext, AgentTraceService agentTraceService) {
+                             AgentCallContext agentCallContext, AgentTraceService agentTraceService,
+                             ApplicationMetrics applicationMetrics) {
         this.ragService = ragService;
         this.labService = labService;
         this.reservationService = reservationService;
@@ -74,6 +80,7 @@ public class LabAssistantTools {
         this.actionDraftService = actionDraftService;
         this.agentCallContext = agentCallContext;
         this.agentTraceService = agentTraceService;
+        this.applicationMetrics = applicationMetrics;
     }
 
     /**
@@ -220,10 +227,12 @@ public class LabAssistantTools {
                     result == null ? "无结果" : result.getClass().getSimpleName(), elapsedMillis(startedAt), null);
             return result;
         } catch (BusinessException exception) {
+            applicationMetrics.agentToolFailure();
             agentTraceService.record(currentSessionId(), toolName, redactedArguments, "业务失败",
                     elapsedMillis(startedAt), exception.getCode().name());
             throw exception;
         } catch (Exception exception) {
+            applicationMetrics.agentToolFailure();
             agentTraceService.record(currentSessionId(), toolName, redactedArguments, "工具失败",
                     elapsedMillis(startedAt), ApiCode.INTERNAL_ERROR.name());
             throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE, ApiCode.DEPENDENCY_UNAVAILABLE,

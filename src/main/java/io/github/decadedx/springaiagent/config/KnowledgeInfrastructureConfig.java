@@ -3,6 +3,7 @@ package io.github.decadedx.springaiagent.config;
 import io.github.decadedx.springaiagent.service.RagChatClient;
 import io.github.decadedx.springaiagent.service.AgentModelClient;
 import io.github.decadedx.springaiagent.service.KnowledgeVectorStore;
+import io.github.decadedx.springaiagent.common.ApplicationMetrics;
 import io.github.decadedx.springaiagent.service.impl.RedisKnowledgeVectorStore;
 import io.github.decadedx.springaiagent.service.impl.SpringAiRagChatClient;
 import io.github.decadedx.springaiagent.service.impl.UnavailableKnowledgeVectorStore;
@@ -53,8 +54,8 @@ public class KnowledgeInfrastructureConfig {
      */
     @Bean
     @ConditionalOnProperty(prefix = "knowledge", name = "rag-enabled", havingValue = "true")
-    public KnowledgeVectorStore redisKnowledgeVectorStore(VectorStore vectorStore) {
-        return new RedisKnowledgeVectorStore(vectorStore);
+    public KnowledgeVectorStore redisKnowledgeVectorStore(VectorStore vectorStore, ApplicationMetrics applicationMetrics) {
+        return new RedisKnowledgeVectorStore(vectorStore, applicationMetrics);
     }
 
     /**
@@ -65,8 +66,8 @@ public class KnowledgeInfrastructureConfig {
      */
     @Bean
     @ConditionalOnProperty(prefix = "knowledge", name = "rag-enabled", havingValue = "true")
-    public RagChatClient springAiRagChatClient(ChatModel chatModel) {
-        return new SpringAiRagChatClient(chatModel);
+    public RagChatClient springAiRagChatClient(ChatModel chatModel, ApplicationMetrics applicationMetrics) {
+        return new SpringAiRagChatClient(chatModel, applicationMetrics);
     }
 
     /**
@@ -77,8 +78,8 @@ public class KnowledgeInfrastructureConfig {
      */
     @Bean
     @ConditionalOnProperty(prefix = "knowledge", name = "rag-enabled", havingValue = "true")
-    public AgentModelClient springAiAgentModelClient(ChatModel chatModel) {
-        return new SpringAiAgentModelClient(chatModel);
+    public AgentModelClient springAiAgentModelClient(ChatModel chatModel, ApplicationMetrics applicationMetrics) {
+        return new SpringAiAgentModelClient(chatModel, applicationMetrics);
     }
 
     /**
