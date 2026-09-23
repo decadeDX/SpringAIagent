@@ -17,12 +17,12 @@ export const trainingStatus = ref<StoredSession['trainingStatus']>('PENDING')
 export const sessionExpired = ref(false)
 
 function readStoredSession(): StoredSession | null {
-  const stored = localStorage.getItem(SESSION_STORAGE_KEY)
+  const stored = sessionStorage.getItem(SESSION_STORAGE_KEY)
   if (!stored) return null
   try {
     return JSON.parse(stored) as StoredSession
   } catch {
-    localStorage.removeItem(SESSION_STORAGE_KEY)
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
     return null
   }
 }
@@ -34,11 +34,6 @@ function applySession(session: StoredSession | null) {
   trainingStatus.value = session?.trainingStatus ?? 'PENDING'
 }
 
-export function synchronizeSession() {
-  sessionExpired.value = false
-  applySession(readStoredSession())
-}
-
 export function updateSession(result: LoginResult) {
   const session: StoredSession = {
     accessToken: result.accessToken,
@@ -46,21 +41,21 @@ export function updateSession(result: LoginResult) {
     role: result.user.role,
     trainingStatus: result.user.trainingStatus,
   }
-  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+  sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
   sessionExpired.value = false
   applySession(session)
 }
 
 export function clearSession() {
-  localStorage.removeItem(SESSION_STORAGE_KEY)
+  sessionStorage.removeItem(SESSION_STORAGE_KEY)
   sessionExpired.value = false
   applySession(null)
 }
 
 export function invalidateSession() {
-  localStorage.removeItem(SESSION_STORAGE_KEY)
+  sessionStorage.removeItem(SESSION_STORAGE_KEY)
   sessionExpired.value = true
   applySession(null)
 }
 
-synchronizeSession()
+applySession(readStoredSession())

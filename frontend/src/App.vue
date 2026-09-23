@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { request } from './api/http'
-import { accessToken, clearSession, role, SESSION_STORAGE_KEY, sessionExpired, synchronizeSession, trainingStatus, username } from './session'
+import { accessToken, clearSession, role, sessionExpired, trainingStatus, username } from './session'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,10 +25,6 @@ const adminNavigation = [
 const navigation = computed(() => isAdminArea.value ? adminNavigation : studentNavigation)
 const accountDescription = computed(() => role.value === 'ADMIN' ? '管理员账户' : trainingStatus.value === 'PASSED' ? '已通过安全培训' : '未通过安全培训')
 
-function homeRoute() {
-  return { name: role.value === 'ADMIN' ? 'admin' : 'assistant' }
-}
-
 function stopSessionCheck() {
   if (sessionCheckTimer) clearInterval(sessionCheckTimer)
   sessionCheckTimer = undefined
@@ -40,14 +36,6 @@ function startSessionCheck() {
   sessionCheckTimer = setInterval(() => {
     void request<void>('/auth/session').catch(() => undefined)
   }, 30_000)
-}
-
-function handleStorage(event: StorageEvent) {
-  if (event.key !== SESSION_STORAGE_KEY && event.key !== null) return
-  synchronizeSession()
-  accountMenuOpen.value = false
-  logoutErrorMessage.value = ''
-  void router.replace(accessToken.value ? homeRoute() : { name: 'login' })
 }
 
 async function logout() {
@@ -73,9 +61,7 @@ watch(accessToken, (token, previousToken) => {
   }
 }, { immediate: true })
 
-onMounted(() => window.addEventListener('storage', handleStorage))
 onBeforeUnmount(() => {
-  window.removeEventListener('storage', handleStorage)
   stopSessionCheck()
 })
 </script>
