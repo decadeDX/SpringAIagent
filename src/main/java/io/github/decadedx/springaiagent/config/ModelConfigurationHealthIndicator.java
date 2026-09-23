@@ -14,8 +14,11 @@ import org.springframework.util.StringUtils;
 @ConditionalOnProperty(prefix = "knowledge", name = "rag-enabled", havingValue = "true")
 public class ModelConfigurationHealthIndicator implements HealthIndicator {
 
-    /** OpenAI 密钥，仅用于判断是否已配置，绝不写入健康响应。 */
-    private final String apiKey;
+    /** 聊天服务密钥，仅用于判断 StepFun 端点是否已配置，绝不写入健康响应。 */
+    private final String chatApiKey;
+
+    /** 嵌入服务密钥，仅用于判断 DashScope 端点是否已配置，绝不写入健康响应。 */
+    private final String embeddingApiKey;
 
     /** 聊天模型标识。 */
     private final String chatModel;
@@ -26,14 +29,17 @@ public class ModelConfigurationHealthIndicator implements HealthIndicator {
     /**
      * 创建模型配置健康检查。
      *
-     * @param apiKey OpenAI 密钥
+     * @param chatApiKey StepFun 聊天服务密钥
+     * @param embeddingApiKey DashScope 嵌入服务密钥
      * @param chatModel 聊天模型标识
      * @param embeddingModel 嵌入模型标识
      */
-    public ModelConfigurationHealthIndicator(@Value("${spring.ai.openai.api-key:}") String apiKey,
+    public ModelConfigurationHealthIndicator(@Value("${spring.ai.openai.api-key:}") String chatApiKey,
+                                             @Value("${spring.ai.openai.embedding.api-key:}") String embeddingApiKey,
                                              @Value("${spring.ai.openai.chat.model:}") String chatModel,
                                              @Value("${spring.ai.openai.embedding.model:}") String embeddingModel) {
-        this.apiKey = apiKey;
+        this.chatApiKey = chatApiKey;
+        this.embeddingApiKey = embeddingApiKey;
         this.chatModel = chatModel;
         this.embeddingModel = embeddingModel;
     }
@@ -41,7 +47,8 @@ public class ModelConfigurationHealthIndicator implements HealthIndicator {
     /** {@inheritDoc} */
     @Override
     public Health health() {
-        return StringUtils.hasText(apiKey) && StringUtils.hasText(chatModel) && StringUtils.hasText(embeddingModel)
+        return StringUtils.hasText(chatApiKey) && StringUtils.hasText(embeddingApiKey)
+                && StringUtils.hasText(chatModel) && StringUtils.hasText(embeddingModel)
                 ? Health.up().build() : Health.down().build();
     }
 }

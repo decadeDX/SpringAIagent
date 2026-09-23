@@ -1,9 +1,9 @@
 package io.github.decadedx.springaiagent.vo;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.decadedx.springaiagent.enums.KnowledgeIndexStatus;
 import io.github.decadedx.springaiagent.enums.KnowledgePublishStatus;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 

@@ -1,10 +1,10 @@
 package io.github.decadedx.springaiagent.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.github.decadedx.springaiagent.enums.KnowledgeIndexStatus;
 import io.github.decadedx.springaiagent.enums.KnowledgePublishStatus;
+import tools.jackson.databind.annotation.JsonSerialize;
+import tools.jackson.databind.ser.std.ToStringSerializer;
 
 import java.time.OffsetDateTime;
 import java.util.List;

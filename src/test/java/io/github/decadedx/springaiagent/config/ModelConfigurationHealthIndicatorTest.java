@@ -12,14 +12,15 @@ class ModelConfigurationHealthIndicatorTest {
     /** 缺少密钥时 RAG 模型配置不可用。 */
     @Test
     void reportsDownWhenApiKeyIsMissing() {
-        assertThat(new ModelConfigurationHealthIndicator("", "gpt-5-mini", "text-embedding-3-small")
+        assertThat(new ModelConfigurationHealthIndicator("stepfun-key", "", "step-3.7-flash", "qwen3.7-text-embedding")
                 .health().getStatus().getCode()).isEqualTo("DOWN");
     }
 
     /** 密钥和模型名完整时不需要真实模型请求即可就绪。 */
     @Test
     void reportsUpWhenRequiredConfigurationIsPresent() {
-        assertThat(new ModelConfigurationHealthIndicator("test-key", "gpt-5-mini", "text-embedding-3-small")
+        assertThat(new ModelConfigurationHealthIndicator("stepfun-key", "dashscope-key", "step-3.7-flash",
+                "qwen3.7-text-embedding")
                 .health().getStatus().getCode()).isEqualTo("UP");
     }
 }

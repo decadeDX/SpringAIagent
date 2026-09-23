@@ -18,12 +18,19 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * 将会话消息交给 Spring AI，并仅收集工具实际返回的草案和知识引用。
  */
 @Service
 public class AgentOrchestrationServiceImpl implements AgentOrchestrationService {
+
+    /** 未调用工具时不可信的查询失败表述。 */
+    private static final Pattern UNGROUNDED_QUERY_FAILURE = Pattern.compile("(数据库|系统).{0,12}(错误|异常)|查询.{0,12}(失败|不可用)");
+
+    /** 未取得可信查询结果时返回的中性提示。 */
+    private static final String UNGROUNDED_QUERY_FAILURE_MESSAGE = "我还没有获得可验证的实时查询结果。请提供具体的开始和结束时间，我会据此查询。";
 
     /** 会话状态服务。 */
     private final ChatSessionService chatSessionService;
@@ -82,6 +89,7 @@ public class AgentOrchestrationServiceImpl implements AgentOrchestrationService 
             agentCallContext.clear();
             throw exception;
         }
+        answer = removeUngroundedQueryFailure(answer, snapshot.toolCallCount());
         chatSessionService.append(sessionId, "assistant", answer);
         return new ChatMessageVO(sessionId, "msg_" + UUID.randomUUID(), answer, snapshot.citations(),
                 snapshot.toolCallCount(), snapshot.draft());
@@ -108,6 +116,20 @@ public class AgentOrchestrationServiceImpl implements AgentOrchestrationService 
     }
 
     /**
+     * 拒绝模型在未调用任何工具时伪造数据库或查询失败，避免将不可验证的信息返回给用户。
+     *
+     * @param answer 模型原始回答
+     * @param toolCallCount 本轮实际工具调用次数
+     * @return 已移除伪造失败说明的安全回答
+     */
+    private String removeUngroundedQueryFailure(String answer, int toolCallCount) {
+        if (toolCallCount == 0 && UNGROUNDED_QUERY_FAILURE.matcher(answer).find()) {
+            return UNGROUNDED_QUERY_FAILURE_MESSAGE;
+        }
+        return answer;
+    }
+
+    /**
      * 构造不可被资料或用户文本覆盖的系统规则。
      *
      * @param message 当前消息，用于显示服务端解析的相对日期
@@ -122,7 +144,7 @@ public class AgentOrchestrationServiceImpl implements AgentOrchestrationService 
                 + "缺少日期、开始时间、时长、人数或设备要求时，只追问缺失字段，不擅自补全。"
                 + "遇到相对日期时按服务端日期解释：明天=" + today.plusDays(1) + "，后天=" + today.plusDays(2)
                 + "；下周一至周日必须换算为明确 ISO 日期后展示。"
-                + "多个候选实验室时要求用户选择；工具失败时如实说明，不能宣称成功。"
+                + "多个候选实验室时要求用户选择；实时实验室查询必须先调用工具。未调用工具时，不能声称已查询、没有可用时段、数据库错误或系统异常；工具失败时如实说明，不能宣称成功。"
                 + "最终回答保持简短，并只引用工具实际返回的资料。服务端解析结果："
                 + String.join("，", relativeDateResolver.resolve(message)) + "。当前用户消息：" + message;
     }

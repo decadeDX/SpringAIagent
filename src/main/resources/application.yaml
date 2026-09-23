@@ -32,12 +32,17 @@ spring:
         speech: none
         transcription: none
     openai:
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
       api-key: ${OPENAI_API_KEY:}
       chat:
-        model: ${OPENAI_CHAT_MODEL:gpt-5-mini}
+        model: ${OPENAI_CHAT_MODEL:}
       embedding:
-        model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+        base-url: ${DASHSCOPE_EMBEDDING_BASE_URL:}
+        api-key: ${DASHSCOPE_API_KEY:}
+        model: ${DASHSCOPE_EMBEDDING_MODEL:qwen3.7-text-embedding}
+        dimensions: ${DASHSCOPE_EMBEDDING_DIMENSIONS:1024}
     vectorstore:
+      type: ${SPRING_AI_VECTORSTORE_TYPE:none}
       redis:
         index-name: lab-knowledge-index
         prefix: "lab-knowledge:"

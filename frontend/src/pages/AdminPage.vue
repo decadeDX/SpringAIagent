@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import {
   disableKnowledgeDocument,
   getKnowledgeDocuments,
@@ -21,6 +21,8 @@ const uploadForm = ref({ logicalDocumentCode: '', title: '', version: 'v1.0', ef
 const loading = ref(true)
 const errorMessage = ref('')
 const publishErrorMessage = ref('')
+const ticketErrorMessage = ref('')
+let documentPollingTimer: ReturnType<typeof setInterval> | undefined
 
 const logicalDocumentOptions = [
   { code: '01', label: '实验室预约管理办法' },
@@ -37,6 +39,28 @@ function localDateTime() {
   return now.toISOString().slice(0, 16)
 }
 
+function hasIndexingDocuments() {
+  return documents.value.some((document) => document.indexStatus === 'PENDING' || document.indexStatus === 'INDEXING')
+}
+
+function stopDocumentPolling() {
+  if (documentPollingTimer) clearInterval(documentPollingTimer)
+  documentPollingTimer = undefined
+}
+
+async function refreshDocuments() {
+  documents.value = await getKnowledgeDocuments()
+  if (!hasIndexingDocuments()) stopDocumentPolling()
+}
+
+function startDocumentPolling() {
+  stopDocumentPolling()
+  if (!hasIndexingDocuments()) return
+  documentPollingTimer = setInterval(() => {
+    void refreshDocuments().catch(() => undefined)
+  }, 2_000)
+}
+
 async function load() {
   loading.value = true
   try {
@@ -45,6 +69,7 @@ async function load() {
       getSubmittedRepairTickets(),
       getKnowledgeDocuments(),
     ])
+    startDocumentPolling()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '无法加载管理数据'
   } finally {
@@ -64,13 +89,17 @@ async function toggleLabStatus(lab: Lab) {
 }
 
 async function processTicket(ticket: RepairTicket) {
+  if (!resolutionNote.value.trim()) {
+    ticketErrorMessage.value = '处理说明不能为空'
+    return
+  }
   try {
-    errorMessage.value = ''
+    ticketErrorMessage.value = ''
     await processRepairTicket(ticket.id, resolutionNote.value)
     resolutionNote.value = ''
     tickets.value = await getSubmittedRepairTickets()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '无法更新工单'
+    ticketErrorMessage.value = error instanceof Error ? error.message : '无法更新工单'
   }
 }
 
@@ -90,7 +119,8 @@ async function uploadDocument() {
     await uploadKnowledgeDocument({ file: uploadFile.value, ...uploadForm.value })
     uploadFile.value = undefined
     uploadForm.value = { logicalDocumentCode: '', title: '', version: 'v1.0', effectiveAt: localDateTime() }
-    documents.value = await getKnowledgeDocuments()
+    await refreshDocuments()
+    startDocumentPolling()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '无法上传知识文档'
   }
@@ -117,6 +147,7 @@ async function disableDocument(id: string) {
 }
 
 onMounted(load)
+onBeforeUnmount(stopDocumentPolling)
 </script>
 
 <template>
@@ -174,18 +205,20 @@ onMounted(load)
 
   <section v-if="!loading" class="card table-card document-card">
     <div class="section-title"><div><h2>知识文档</h2><p>上传后的文档需要索引成功才可发布。</p></div></div>
-    <table>
-      <thead><tr><th>文档</th><th>版本</th><th>分块</th><th>索引状态</th><th>发布状态</th><th>操作</th></tr></thead>
-      <tbody>
-        <tr v-for="document in documents" :key="document.id">
-          <td><strong>{{ document.title }}</strong><small>{{ document.logicalDocumentCode }}</small></td>
-          <td>{{ document.version }}</td><td>{{ document.chunkCount }}</td>
-          <td><span class="status-badge" :class="document.indexStatus === 'SUCCEEDED' ? 'online' : 'processing'">{{ document.indexStatus }}</span></td>
-          <td>{{ document.publishStatus }}</td>
-          <td><button v-if="document.publishStatus !== 'PUBLISHED'" class="text-button" :disabled="document.indexStatus !== 'SUCCEEDED'" @click="publishDocument(document.id)">发布</button><button v-else class="text-button" @click="disableDocument(document.id)">停用</button></td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="document-table-viewport">
+      <table>
+        <thead><tr><th>文档</th><th>版本</th><th>分块</th><th>索引状态</th><th>发布状态</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr v-for="document in documents" :key="document.id">
+            <td><strong>{{ document.title }}</strong><small>{{ document.logicalDocumentCode }}</small></td>
+            <td>{{ document.version }}</td><td>{{ document.chunkCount }}</td>
+            <td><span class="status-badge" :class="document.indexStatus === 'SUCCEEDED' ? 'online' : 'processing'">{{ document.indexStatus }}</span></td>
+            <td>{{ document.publishStatus }}</td>
+            <td><button v-if="document.publishStatus !== 'PUBLISHED'" class="text-button" :disabled="document.indexStatus !== 'SUCCEEDED'" @click="publishDocument(document.id)">发布</button><button v-else class="text-button" @click="disableDocument(document.id)">停用</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <div v-if="publishErrorMessage" class="modal-backdrop" @click.self="publishErrorMessage = ''">
@@ -193,6 +226,14 @@ onMounted(load)
       <h2 id="publish-error-title">发布失败</h2>
       <p>{{ publishErrorMessage }}</p>
       <div class="modal-actions"><button class="primary-button" @click="publishErrorMessage = ''">知道了</button></div>
+    </section>
+  </div>
+
+  <div v-if="ticketErrorMessage" class="modal-backdrop" @click.self="ticketErrorMessage = ''">
+    <section class="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="ticket-error-title">
+      <h2 id="ticket-error-title">工单更新失败</h2>
+      <p>{{ ticketErrorMessage }}</p>
+      <div class="modal-actions"><button class="primary-button" @click="ticketErrorMessage = ''">知道了</button></div>
     </section>
   </div>
 </template>

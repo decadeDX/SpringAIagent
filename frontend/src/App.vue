@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { request } from './api/http'
 import { accessToken, clearSession, role, sessionExpired, trainingStatus, username } from './session'
@@ -50,6 +50,12 @@ async function logout() {
   }
 }
 
+function releaseSessionOnPageExit(event: PageTransitionEvent) {
+  if (event.persisted || !accessToken.value) return
+  void request<void>('/auth/logout', { method: 'POST', keepalive: true }).catch(() => undefined)
+  clearSession()
+}
+
 watch(accessToken, (token, previousToken) => {
   if (token) {
     startSessionCheck()
@@ -61,8 +67,13 @@ watch(accessToken, (token, previousToken) => {
   }
 }, { immediate: true })
 
+onMounted(() => {
+  window.addEventListener('pagehide', releaseSessionOnPageExit)
+})
+
 onBeforeUnmount(() => {
   stopSessionCheck()
+  window.removeEventListener('pagehide', releaseSessionOnPageExit)
 })
 </script>
 
