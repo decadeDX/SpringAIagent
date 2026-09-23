@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
-import { request, useMockApi } from './api/http'
+import { request } from './api/http'
 import { accessToken, clearSession, role, SESSION_STORAGE_KEY, sessionExpired, synchronizeSession, trainingStatus, username } from './session'
 
 const route = useRoute()
@@ -36,7 +36,7 @@ function stopSessionCheck() {
 
 function startSessionCheck() {
   stopSessionCheck()
-  if (useMockApi || !accessToken.value) return
+  if (!accessToken.value) return
   sessionCheckTimer = setInterval(() => {
     void request<void>('/auth/session').catch(() => undefined)
   }, 30_000)
@@ -53,7 +53,7 @@ function handleStorage(event: StorageEvent) {
 async function logout() {
   logoutErrorMessage.value = ''
   try {
-    if (!useMockApi) await request<void>('/auth/logout', { method: 'POST' })
+    await request<void>('/auth/logout', { method: 'POST' })
     clearSession()
     accountMenuOpen.value = false
     await router.push({ name: 'login' })

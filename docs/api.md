@@ -93,6 +93,7 @@
 |---|---|---|---|---|
 | POST | `/api/repair-drafts` | STUDENT | `{labId,equipmentInfo,description,safetyRisk?}` | 201，报修待确认动作 |
 | GET | `/api/repair-tickets/me` | STUDENT | `status?`、分页 | 200，本人工单 |
+| GET | `/api/admin/repair-tickets` | ADMIN | `status?`、分页 | 200，全部工单 |
 | PATCH | `/api/admin/repair-tickets/{ticketId}` | ADMIN | `{status,resolutionNote}` | 200，更新后的工单 |
 
 `safetyRisk` 只能提示，服务端遇到“冒烟”“漏电”“焦糊味”会强制置为 `true`，并在草案中加入停止使用、避免自行维修、联系管理员的固定安全提示。工单状态仅允许 `SUBMITTED -> PROCESSING -> RESOLVED` 的相邻转移；管理员每次处理都必须提供 `resolutionNote`。

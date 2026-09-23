@@ -23,6 +23,25 @@
         <include refid="mineConditions"/>
     </select>
 
+    <select id="selectAll" resultType="io.github.decadedx.springaiagent.entity.RepairTicket">
+        SELECT id, user_id, lab_id, equipment_info, description, safety_risk, status,
+               resolution_note, processed_by, version, created_at, updated_at
+        FROM repair_ticket
+        <if test="status != null">
+            WHERE status = #{status}
+        </if>
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*)
+        FROM repair_ticket
+        <if test="status != null">
+            WHERE status = #{status}
+        </if>
+    </select>
+
     <select id="selectByIdForUpdate" resultType="io.github.decadedx.springaiagent.entity.RepairTicket">
         SELECT id, user_id, lab_id, equipment_info, description, safety_risk, status,
                resolution_note, processed_by, version, created_at, updated_at

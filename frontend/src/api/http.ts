@@ -8,7 +8,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   const response = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -18,5 +18,3 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   if (!response.ok) throw new Error(body.message)
   return body.data
 }
-
-export const useMockApi = import.meta.env.VITE_USE_MOCK_API !== 'false'

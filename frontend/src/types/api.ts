@@ -51,6 +51,19 @@ export interface RepairTicket {
   status: 'SUBMITTED' | 'PROCESSING' | 'RESOLVED'
   resolutionNote?: string
   createdAt: string
+  updatedAt: string
+}
+
+export type LabStatus = 'ACTIVE' | 'MAINTENANCE' | 'DISABLED'
+
+export interface Lab {
+  id: string
+  name: string
+  capacity: number
+  equipmentDescription: string
+  openTime: string
+  closeTime: string
+  status: LabStatus
 }
 
 export interface Citation {

@@ -36,6 +36,25 @@ public interface RepairTicketMapper extends BaseMapper<RepairTicket> {
     long countMine(@Param("userId") Long userId, @Param("status") RepairTicketStatus status);
 
     /**
+     * 分页查询管理员可见的全部工单。
+     *
+     * @param status 可选状态条件
+     * @param offset 从零开始的偏移量
+     * @param size 本页数量
+     * @return 管理员可见的工单
+     */
+    List<RepairTicket> selectAll(@Param("status") RepairTicketStatus status, @Param("offset") long offset,
+                                 @Param("size") int size);
+
+    /**
+     * 统计管理员可见的全部工单数量。
+     *
+     * @param status 可选状态条件
+     * @return 工单总数
+     */
+    long countAll(@Param("status") RepairTicketStatus status);
+
+    /**
      * 锁定工单行以读取当前状态和版本，防止并发处理产生非法跳转。
      *
      * @param ticketId 工单主键

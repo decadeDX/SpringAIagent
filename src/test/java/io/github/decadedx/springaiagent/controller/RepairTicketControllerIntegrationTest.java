@@ -15,6 +15,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -43,9 +45,17 @@ class RepairTicketControllerIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /** 隔离单账号登录状态的 Redis 访问入口。 */
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
     @BeforeEach
     void setUp() {
         jdbcTemplate.update("DELETE FROM repair_ticket");
+        Set<String> sessionKeys = stringRedisTemplate.keys("auth:session:*");
+        if (sessionKeys != null && !sessionKeys.isEmpty()) {
+            stringRedisTemplate.delete(sessionKeys);
+        }
     }
 
     @AfterEach
@@ -93,6 +103,22 @@ class RepairTicketControllerIntegrationTest {
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.status").value("PROCESSING"))
                 .andExpect(jsonPath("$.data.resolutionNote").value("已安排技术员检查"));
+    }
+
+    @Test
+    void shouldListSubmittedTicketsForAdmin() throws Exception {
+        authenticateStudentOne();
+        repairTicketService.confirmCreate(repairTicketService.prepareCreate(
+                new RepairDraftCreateDTO("LAB-A301", "投影仪", "无法开机", false)));
+        SecurityContextHolder.clearContext();
+
+        mockMvc.perform(get("/api/admin/repair-tickets")
+                        .param("status", "SUBMITTED")
+                        .header("Authorization", "Bearer " + login("admin01")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].equipmentInfo").value("投影仪"));
     }
 
     private String login(String username) throws Exception {

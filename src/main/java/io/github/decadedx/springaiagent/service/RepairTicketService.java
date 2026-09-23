@@ -37,6 +37,14 @@ public interface RepairTicketService {
     RepairTicketPageVO findMine(RepairTicketQueryDTO queryDTO);
 
     /**
+     * 分页查询全部工单，供管理员处理待办和追踪状态。
+     *
+     * @param queryDTO 状态和分页条件
+     * @return 管理员可见的工单分页结果
+     */
+    RepairTicketPageVO findAll(RepairTicketQueryDTO queryDTO);
+
+    /**
      * 管理员按相邻状态处理工单，并记录本次处理说明和处理人。
      *
      * @param ticketId 待处理工单主键

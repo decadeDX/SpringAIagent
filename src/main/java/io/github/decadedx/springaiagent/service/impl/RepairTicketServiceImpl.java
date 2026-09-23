@@ -124,6 +124,24 @@ public class RepairTicketServiceImpl implements RepairTicketService {
      * {@inheritDoc}
      */
     @Override
+    public RepairTicketPageVO findAll(RepairTicketQueryDTO queryDTO) {
+        requireAdmin();
+        RepairTicketQueryDTO criteria = queryDTO == null
+                ? new RepairTicketQueryDTO(null, null, null) : queryDTO;
+        int page = criteria.page() == null ? 1 : criteria.page();
+        int size = criteria.size() == null ? 20 : criteria.size();
+        long total = repairTicketMapper.countAll(criteria.status());
+        List<RepairTicketVO> items = repairTicketMapper.selectAll(criteria.status(), (long) (page - 1) * size, size)
+                .stream()
+                .map(this::toVO)
+                .toList();
+        return new RepairTicketPageVO(items, page, size, total);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public RepairTicketVO process(Long ticketId, RepairTicketUpdateDTO updateDTO) {
         Long adminId = requireAdmin();

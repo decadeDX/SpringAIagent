@@ -262,6 +262,25 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/UnprocessableContent' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /admin/repair-tickets:
+    get:
+      tags: [Administration, Repairs]
+      operationId: listAdminRepairTickets
+      summary: 管理员分页查询全部工单
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/RepairTicketStatus' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+      responses:
+        '200':
+          description: 管理员可见的工单列表
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RepairTicketPageResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /admin/repair-tickets/{ticketId}:
     patch:
       tags: [Administration, Repairs]
