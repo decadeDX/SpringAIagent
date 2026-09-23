@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { confirmAction } from '../api/action'
 import { getMyReservations, prepareCancellation } from '../api/reservation'
 import type { ActionDraft, Reservation } from '../types/api'
@@ -9,12 +10,24 @@ const draft = ref<ActionDraft>()
 const selectedReservation = ref<Reservation>()
 const loading = ref(true)
 const errorMessage = ref('')
+const successMessage = ref('')
+const route = useRoute()
+const router = useRouter()
 
 const activeReservations = computed(() => reservations.value.filter((item) => item.status === 'CONFIRMED'))
 
 onMounted(async () => {
-  reservations.value = await getMyReservations()
-  loading.value = false
+  try {
+    reservations.value = await getMyReservations()
+    if (route.query.created === '1') {
+      successMessage.value = '预约创建成功，已更新预约记录。'
+      await router.replace({ name: 'reservations' })
+    }
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '无法加载预约记录'
+  } finally {
+    loading.value = false
+  }
 })
 
 async function createCancellationDraft(reservation: Reservation) {
@@ -47,9 +60,11 @@ async function confirm() {
       <h1>我的预约</h1>
       <p>当前有效预约 {{ activeReservations.length }} / 2。取消操作将先生成草案。</p>
     </div>
+    <RouterLink class="primary-button" :to="{ name: 'reservation-create' }">新建预约</RouterLink>
   </header>
 
   <section class="card table-card">
+    <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
     <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
     <div v-if="loading" class="empty-state">正在加载预约记录…</div>
     <table v-else>

@@ -3,6 +3,7 @@ import AdminPage from '../pages/AdminPage.vue'
 import AssistantPage from '../pages/AssistantPage.vue'
 import LoginPage from '../pages/LoginPage.vue'
 import RepairsPage from '../pages/RepairsPage.vue'
+import ReservationCreatePage from '../pages/ReservationCreatePage.vue'
 import ReservationsPage from '../pages/ReservationsPage.vue'
 import { accessToken, role } from '../session'
 
@@ -13,6 +14,7 @@ const router = createRouter({
     { path: '/login', name: 'login', component: LoginPage },
     { path: '/assistant', name: 'assistant', component: AssistantPage, meta: { requiresAuth: true, area: 'student' } },
     { path: '/reservations', name: 'reservations', component: ReservationsPage, meta: { requiresAuth: true, area: 'student' } },
+    { path: '/reservations/new', name: 'reservation-create', component: ReservationCreatePage, meta: { requiresAuth: true, area: 'student' } },
     { path: '/repairs', name: 'repairs', component: RepairsPage, meta: { requiresAuth: true, area: 'student' } },
     { path: '/admin', name: 'admin', component: AdminPage, meta: { requiresAuth: true, requiresAdmin: true, area: 'admin' } },
   ],

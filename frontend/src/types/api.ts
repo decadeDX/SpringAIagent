@@ -66,6 +66,27 @@ export interface Lab {
   status: LabStatus
 }
 
+export interface LabAvailabilitySlot {
+  startTime: string
+  endTime: string
+  available: boolean
+}
+
+export interface LabAvailability {
+  labId: string
+  date: string
+  openTime: string
+  closeTime: string
+  slots: LabAvailabilitySlot[]
+}
+
+export interface ReservationDraftInput {
+  labId: string
+  startTime: string
+  endTime: string
+  participantCount: number
+}
+
 export interface Citation {
   documentTitle: string
   version: string
