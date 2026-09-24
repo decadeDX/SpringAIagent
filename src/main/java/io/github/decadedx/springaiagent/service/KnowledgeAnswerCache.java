@@ -48,7 +48,7 @@ public class KnowledgeAnswerCache {
     }
 
     /**
-     * 读取当前发布版本和问题对应的缓存答案。
+     * 读取当前发布版本和问题对应的、有可验证引用的缓存答案；历史拒答缓存会被删除并重新检索。
      *
      * @param question 用户原始问题
      * @return 命中时的完整问答响应
@@ -59,7 +59,12 @@ public class KnowledgeAnswerCache {
             return Optional.empty();
         }
         try {
-            return Optional.of(objectMapper.readValue(content, RagAnswerVO.class));
+            RagAnswerVO answer = objectMapper.readValue(content, RagAnswerVO.class);
+            if (answer.citations() == null || answer.citations().isEmpty()) {
+                stringRedisTemplate.delete(answerKey(question));
+                return Optional.empty();
+            }
+            return Optional.of(answer);
         } catch (JacksonException exception) {
             stringRedisTemplate.delete(answerKey(question));
             return Optional.empty();
@@ -67,12 +72,15 @@ public class KnowledgeAnswerCache {
     }
 
     /**
-     * 缓存一次仅基于公开知识资料生成的问答结果。
+     * 缓存一次仅基于公开知识资料生成、且带有可验证引用的问答结果；拒答不缓存，以免后续资料发布后误用旧结果。
      *
      * @param question 用户原始问题
      * @param answer 待缓存的问答响应
      */
     public void put(String question, RagAnswerVO answer) {
+        if (answer.citations() == null || answer.citations().isEmpty()) {
+            return;
+        }
         try {
             stringRedisTemplate.opsForValue().set(answerKey(question), objectMapper.writeValueAsString(answer),
                     knowledgeProperties.cacheTtl());

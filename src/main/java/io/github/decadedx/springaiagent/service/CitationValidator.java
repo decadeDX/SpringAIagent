@@ -4,6 +4,7 @@ import io.github.decadedx.springaiagent.vo.KnowledgeCitationVO;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +28,7 @@ public class CitationValidator {
      *
      * @param response 模型结构化输出
      * @param retrievedChunks 本轮 TopK 分块，以 chunkId 为键
-     * @return 所有引用均有效时返回转换结果，否则为空
+     * @return 至少存在一条有效引用时返回转换结果；无效或重复的模型引用不会对外暴露
      */
     public Optional<List<KnowledgeCitationVO>> validate(RagModelResponse response,
                                                         Map<String, KnowledgeVectorDocument> retrievedChunks) {
@@ -36,24 +37,26 @@ public class CitationValidator {
             return Optional.empty();
         }
         Set<String> seenChunkIds = new LinkedHashSet<>();
-        List<KnowledgeCitationVO> citations = response.citations().stream().map(candidate -> {
+        List<KnowledgeCitationVO> citations = new ArrayList<>();
+        for (RagModelCitation candidate : response.citations()) {
             if (candidate == null || !StringUtils.hasText(candidate.chunkId()) || !StringUtils.hasText(candidate.excerpt())
-                    || !seenChunkIds.add(candidate.chunkId())) {
-                return null;
+                    || seenChunkIds.contains(candidate.chunkId())) {
+                continue;
             }
             KnowledgeVectorDocument chunk = retrievedChunks.get(candidate.chunkId());
             if (chunk == null || !chunk.content().contains(candidate.excerpt().trim())) {
-                return null;
+                continue;
             }
             Object rawTitle = chunk.metadata().get(TITLE_KEY);
             Object rawVersion = chunk.metadata().get(VERSION_KEY);
             if (!(rawTitle instanceof String title) || !(rawVersion instanceof String version)
                     || !StringUtils.hasText(title) || !StringUtils.hasText(version)) {
-                return null;
+                continue;
             }
-            return new KnowledgeCitationVO(title, version, candidate.chunkId(), candidate.excerpt().trim());
-        }).toList();
-        return citations.stream().anyMatch(item -> item == null) ? Optional.empty() : Optional.of(citations);
+            seenChunkIds.add(candidate.chunkId());
+            citations.add(new KnowledgeCitationVO(title, version, candidate.chunkId(), candidate.excerpt().trim()));
+        }
+        return citations.isEmpty() ? Optional.empty() : Optional.of(List.copyOf(citations));
     }
 
 }

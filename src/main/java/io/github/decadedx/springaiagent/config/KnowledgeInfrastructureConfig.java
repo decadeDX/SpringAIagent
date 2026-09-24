@@ -59,7 +59,7 @@ public class KnowledgeInfrastructureConfig {
      * @param connectionFactory 复用应用 Redis 连接配置的 Jedis 工厂
      * @param indexName Redis Search 索引名称
      * @param prefix 向量 JSON 记录的 Redis Key 前缀
-     * @return 注册 documentId TAG 元数据字段的向量存储
+     * @return 注册文档版本过滤和引用展示所需元数据字段的向量存储
      */
     @Bean
     @ConditionalOnProperty(prefix = "knowledge", name = "rag-enabled", havingValue = "true")
@@ -70,7 +70,12 @@ public class KnowledgeInfrastructureConfig {
         return RedisVectorStore.builder(redisClient(connectionFactory), embeddingModel)
                 .indexName(indexName)
                 .prefix(prefix)
-                .metadataFields(RedisVectorStore.MetadataField.tag("documentId"))
+                .metadataFields(
+                        RedisVectorStore.MetadataField.tag("documentId"),
+                        RedisVectorStore.MetadataField.tag("chunkId"),
+                        RedisVectorStore.MetadataField.tag("logicalDocumentCode"),
+                        RedisVectorStore.MetadataField.tag("title"),
+                        RedisVectorStore.MetadataField.tag("version"))
                 .initializeSchema(true)
                 .build();
     }

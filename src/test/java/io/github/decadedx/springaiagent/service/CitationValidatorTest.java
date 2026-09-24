@@ -33,4 +33,17 @@ class CitationValidatorTest {
                         List.of(new RagModelCitation("101-1", "必须完成安全培训"))), Map.of("101-1", chunk)))
                 .isEmpty();
     }
+
+    @Test
+    void shouldKeepVerifiedCitationsWhenModelAlsoReturnsInvalidOrDuplicateOnes() {
+        KnowledgeVectorDocument chunk = new KnowledgeVectorDocument("record-1", "预约前必须完成安全培训。",
+                Map.of("chunkId", "101-1", "title", "实验室指南", "version", "v1"));
+
+        assertThat(citationValidator.validate(new RagModelResponse("需要先培训", List.of(
+                new RagModelCitation("outside-1", "不存在"),
+                new RagModelCitation("101-1", "必须完成安全培训"),
+                new RagModelCitation("101-1", "必须完成安全培训"))), Map.of("101-1", chunk)))
+                .hasValueSatisfying(citations -> assertThat(citations).hasSize(1)
+                        .allSatisfy(citation -> assertThat(citation.chunkId()).isEqualTo("101-1")));
+    }
 }
