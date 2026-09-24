@@ -173,6 +173,44 @@ class ActionConfirmationConcurrencyIntegrationTest {
     }
 
     /**
+     * 同一草案被重复并发确认时，动作主键必须只允许一次领域写入，其他请求重放同一成功结果。
+     *
+     * @throws Exception 并发任务未能完成时测试失败
+     */
+    @Test
+    void shouldCreateOneReservationAndReplayWhenSameActionIsConfirmedConcurrently() throws Exception {
+        long userId = 1001L;
+        insertTrainedStudent(userId);
+        ActionDraftVO draft = createDraft(userId, START_TIME);
+        int confirmationCount = 5;
+        CountDownLatch ready = new CountDownLatch(confirmationCount);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(confirmationCount);
+        try {
+            List<Future<ActionExecutionVO>> confirmations = new ArrayList<>();
+            for (int index = 0; index < confirmationCount; index++) {
+                confirmations.add(executor.submit(() -> confirmActionWhenStarted(userId, draft, ready, start)));
+            }
+            ready.await();
+            start.countDown();
+
+            List<ActionExecutionVO> outcomes = new ArrayList<>();
+            for (Future<ActionExecutionVO> confirmation : confirmations) {
+                outcomes.add(confirmation.get());
+            }
+            assertThat(outcomes).allSatisfy(outcome -> {
+                assertThat(outcome.executionStatus().name()).isEqualTo("SUCCEEDED");
+                assertThat(outcome.result().get("reservationId")).isEqualTo(outcomes.get(0).result().get("reservationId"));
+            });
+            assertThat(outcomes.stream().filter(ActionExecutionVO::idempotentReplay)).hasSize(4);
+            assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM reservation", Long.class)).isEqualTo(1L);
+            assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM action_execution", Long.class)).isEqualTo(1L);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    /**
      * 为二十位已培训学生逐一生成同一时段的独立草案；生成草案本身不应占用时隙。
      *
      * @return 与学生编号顺序一致的草案
@@ -235,6 +273,28 @@ class ActionConfirmationConcurrencyIntegrationTest {
             return execution.executionStatus().name().equals("SUCCEEDED") ? ApiCode.OK : ApiCode.BUSINESS_CONFLICT;
         } catch (BusinessException exception) {
             return exception.getCode();
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    /**
+     * 并发确认同一草案，并保留完整执行结果以验证成功重放语义。
+     *
+     * @param userId 草案所属学生
+     * @param draft 待确认草案
+     * @param ready 就绪屏障
+     * @param start 放行屏障
+     * @return 首次执行或幂等重放的动作结果
+     * @throws InterruptedException 等待屏障被中断时抛出
+     */
+    private ActionExecutionVO confirmActionWhenStarted(long userId, ActionDraftVO draft, CountDownLatch ready,
+                                                        CountDownLatch start) throws InterruptedException {
+        authenticate(userId);
+        ready.countDown();
+        start.await();
+        try {
+            return actionConfirmationService.confirm(draft.actionId(), new ActionConfirmDTO(draft.sessionId()));
         } finally {
             SecurityContextHolder.clearContext();
         }

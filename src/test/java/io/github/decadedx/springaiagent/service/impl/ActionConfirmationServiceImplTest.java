@@ -6,6 +6,7 @@ import io.github.decadedx.springaiagent.entity.ActionExecution;
 import io.github.decadedx.springaiagent.enums.ActionExecutionStatus;
 import io.github.decadedx.springaiagent.enums.ActionType;
 import io.github.decadedx.springaiagent.mapper.ActionExecutionMapper;
+import io.github.decadedx.springaiagent.mapper.SysUserMapper;
 import io.github.decadedx.springaiagent.security.AuthenticatedUser;
 import io.github.decadedx.springaiagent.service.ActionDraftService;
 import io.github.decadedx.springaiagent.service.RepairTicketService;
@@ -51,7 +52,8 @@ class ActionConfirmationServiceImplTest {
         when(mapper.selectById("action-01")).thenReturn(execution);
         authenticateStudent();
 
-        ActionConfirmationServiceImpl service = new ActionConfirmationServiceImpl(mapper, mock(ActionDraftService.class),
+        ActionConfirmationServiceImpl service = new ActionConfirmationServiceImpl(mapper, mock(SysUserMapper.class),
+                mock(ActionDraftService.class),
                 mock(ReservationService.class), mock(RepairTicketService.class), new ObjectMapper(),
                 mock(PlatformTransactionManager.class), mock(ApplicationMetrics.class));
 

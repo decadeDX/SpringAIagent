@@ -12,6 +12,7 @@ import io.github.decadedx.springaiagent.enums.ActionExecutionStatus;
 import io.github.decadedx.springaiagent.enums.ActionType;
 import io.github.decadedx.springaiagent.exception.BusinessException;
 import io.github.decadedx.springaiagent.mapper.ActionExecutionMapper;
+import io.github.decadedx.springaiagent.mapper.SysUserMapper;
 import io.github.decadedx.springaiagent.security.CurrentUser;
 import io.github.decadedx.springaiagent.service.ActionConfirmationService;
 import io.github.decadedx.springaiagent.service.ActionDraftService;
@@ -45,6 +46,9 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
     /** 动作执行记录访问入口。 */
     private final ActionExecutionMapper actionExecutionMapper;
 
+    /** 用户访问入口，用于在写入动作记录前统一获取当前用户行锁。 */
+    private final SysUserMapper sysUserMapper;
+
     /** Redis 草案访问服务。 */
     private final ActionDraftService actionDraftService;
 
@@ -70,6 +74,7 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
      * 创建动作确认服务。
      *
      * @param actionExecutionMapper 幂等记录 Mapper
+     * @param sysUserMapper 用户 Mapper
      * @param actionDraftService 草案服务
      * @param reservationService 预约服务
      * @param repairTicketService 报修服务
@@ -78,6 +83,7 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
      * @param applicationMetrics 动作执行指标
      */
     public ActionConfirmationServiceImpl(ActionExecutionMapper actionExecutionMapper,
+                                         SysUserMapper sysUserMapper,
                                          ActionDraftService actionDraftService,
                                          ReservationService reservationService,
                                          RepairTicketService repairTicketService,
@@ -85,6 +91,7 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
                                          PlatformTransactionManager transactionManager,
                                          ApplicationMetrics applicationMetrics) {
         this.actionExecutionMapper = actionExecutionMapper;
+        this.sysUserMapper = sysUserMapper;
         this.actionDraftService = actionDraftService;
         this.reservationService = reservationService;
         this.repairTicketService = repairTicketService;
@@ -130,10 +137,7 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
      * @return 执行结果
      */
     private ActionExecutionVO executeNew(StoredActionDraft draft, Long userId) {
-        ActionExecution existing = actionExecutionMapper.selectByActionIdForUpdate(draft.actionId());
-        if (existing != null) {
-            return replayOrFailure(existing, userId);
-        }
+        lockUser(userId);
         ActionExecution execution = new ActionExecution();
         execution.setActionId(draft.actionId());
         execution.setUserId(userId);
@@ -144,7 +148,7 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
         try {
             actionExecutionMapper.insert(execution);
         } catch (DuplicateKeyException exception) {
-            ActionExecution competing = actionExecutionMapper.selectByActionIdForUpdate(draft.actionId());
+            ActionExecution competing = actionExecutionMapper.selectById(draft.actionId());
             if (competing != null) {
                 return replayOrFailure(competing, userId);
             }
@@ -158,6 +162,15 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
         actionExecutionMapper.updateById(execution);
         return new ActionExecutionVO(execution.getActionId(), execution.getActionType(),
                 ActionExecutionStatus.SUCCEEDED, false, result);
+    }
+
+    /**
+     * 在动作记录写入前锁定当前用户，避免外键共享锁与预约额度校验的排他锁发生并发升级死锁。
+     *
+     * @param userId 当前认证用户主键
+     */
+    private void lockUser(Long userId) {
+        sysUserMapper.selectByIdForUpdate(userId);
     }
 
     /**

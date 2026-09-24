@@ -46,6 +46,7 @@ spring:
       api-key: ${OPENAI_API_KEY:}
       chat:
         model: ${OPENAI_CHAT_MODEL:}
+        max-completion-tokens: ${OPENAI_CHAT_MAX_COMPLETION_TOKENS:4096}
       embedding:
         base-url: ${DASHSCOPE_EMBEDDING_BASE_URL:}
         api-key: ${DASHSCOPE_API_KEY:}
