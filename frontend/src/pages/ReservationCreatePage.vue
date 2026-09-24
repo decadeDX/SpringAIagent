@@ -47,6 +47,7 @@ watch([selectedLabId, selectedDate], () => {
   selectedStartTime.value = ''
   duration.value = 1
   draft.value = undefined
+  errorMessage.value = ''
   void loadAvailability()
 })
 
@@ -81,6 +82,13 @@ function selectStart(slot: LabAvailabilitySlot) {
   selectedStartTime.value = slot.startTime
   if (!canUseDuration(duration.value)) duration.value = 1
   draft.value = undefined
+  errorMessage.value = ''
+}
+
+function selectDuration(hours: number) {
+  duration.value = hours
+  draft.value = undefined
+  errorMessage.value = ''
 }
 
 async function createDraft() {
@@ -109,8 +117,9 @@ async function confirm() {
     await confirmAction(draft.value)
     await router.push({ name: 'reservations', query: { created: '1' } })
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '预约确认失败'
+    const message = error instanceof Error ? error.message : '预约确认失败'
     await loadAvailability()
+    errorMessage.value = message
   }
 }
 
@@ -177,7 +186,7 @@ function isWeekend(date: string) {
         <div class="reservation-step">
           <div class="step-heading"><span>2</span><div><h2>选择日期和时段</h2><p>可预约 1 至 3 个连续整点时段，仅供参考。</p></div></div>
           <label class="date-field">预约日期<input v-model="selectedDate" type="date" :min="shanghaiDate(new Date())" :max="maxDate" /></label>
-          <p v-if="dateError" class="form-error">{{ dateError }}</p>
+          <p v-if="dateError" class="empty-state">该日期不可预约，请重新选择工作日。</p>
           <p v-else-if="!selectedLabId || !selectedDate" class="empty-state">请先选择实验室和日期。</p>
           <p v-else-if="loadingSlots" class="empty-state">正在加载可用时段…</p>
           <p v-else-if="slots.length === 0" class="empty-state">当天没有可查询的预约时段。</p>
@@ -195,16 +204,15 @@ function isWeekend(date: string) {
           </div>
           <div v-if="selectedStartTime" class="duration-options">
             <span>预约时长</span>
-            <button v-for="hours in [1, 2, 3]" :key="hours" type="button" :class="{ selected: duration === hours }" :disabled="!canUseDuration(hours)" @click="duration = hours">{{ hours }} 小时</button>
+            <button v-for="hours in [1, 2, 3]" :key="hours" type="button" :class="{ selected: duration === hours }" :disabled="!canUseDuration(hours)" @click="selectDuration(hours)">{{ hours }} 小时</button>
           </div>
         </div>
 
         <div class="reservation-step participant-field">
           <div class="step-heading"><span>3</span><div><h2>填写参与人数</h2><p>人数不能超过所选实验室容量。</p></div></div>
-          <label>参与人数<input v-model.number="participantCount" type="number" min="1" :max="selectedLab?.capacity" required /></label>
+          <label>参与人数<input v-model.number="participantCount" type="number" min="1" :max="selectedLab?.capacity" required @input="errorMessage = ''" /></label>
         </div>
 
-        <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <button class="primary-button" :disabled="!selectedLab || !selectedDate || !selectedStartTime || !selectedEndTime || loadingSlots">生成待确认草案</button>
       </form>
     </section>
@@ -230,5 +238,13 @@ function isWeekend(date: string) {
         <p class="empty-state">完成选择后生成草案，再确认提交预约。</p>
       </template>
     </aside>
+  </div>
+
+  <div v-if="errorMessage" class="modal-backdrop" @click.self="errorMessage = ''">
+    <section class="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="reservation-error-title">
+      <h2 id="reservation-error-title">预约提示</h2>
+      <p>{{ errorMessage }}</p>
+      <div class="modal-actions"><button class="primary-button" @click="errorMessage = ''">知道了</button></div>
+    </section>
   </div>
 </template>
