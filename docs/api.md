@@ -6,6 +6,7 @@
 - 操作者身份只来自 Token；所有请求体均不定义 `userId`。时间使用 ISO-8601 且带 `+08:00`，例如 `2026-09-17T14:00:00+08:00`。
 - 所有 Controller 使用 [后端开发规范](backend-conventions.md) 中的 `Result<T>`：`{"code":200,"message":"成功","data": {...}, "requestId": "req_xxx"}`；错误响应见 [HTTP 返回码与业务码](http-error-codes.md)。Controller 接收 DTO、返回 VO，不能以 Entity 作为请求或响应模型。
 - 路径参数、DTO/VO 的字段含义以本接口文档为准；持久化表、时隙唯一键、UTC 时间存储和动作幂等记录必须遵从 [数据库设计](database-design.md)，不得由 Controller 或前端绕过。
+- 所有对外暴露的持久化 `BIGINT` 主键均以十进制字符串传输，避免 JavaScript `Number` 精度丢失；人数、容量、分页和统计等业务数值仍为 JSON 数字。
 - 分页参数：`page` 从 1 开始，默认 20、最大 50；列表 `data` 为 `{items,page,size,total}`。
 - 所有草案创建与动作确认只由当前用户操作。`actionId` 是确认接口的持久化幂等键；客户端无需也不应传 `userId`。
 - `GET /actuator/health` 可匿名读取且只返回总体状态；其他 Actuator 端点不对外暴露。启用 RAG 时，健康状态同时依赖模型配置和 Redis Stack 向量索引，不返回密钥、地址或索引详情。
@@ -27,7 +28,7 @@
     "accessToken": "eyJ...",
     "tokenType": "Bearer",
     "expiresAt": "2026-09-16T16:00:00+08:00",
-    "user": {"id": 1, "username": "student01", "role": "STUDENT", "trainingStatus": "PASSED"}
+    "user": {"id": "1", "username": "student01", "role": "STUDENT", "trainingStatus": "PASSED"}
   },
   "requestId": "req_x"
 }
@@ -115,7 +116,7 @@
     "actionType": "CREATE_RESERVATION",
     "executionStatus": "SUCCEEDED",
     "idempotentReplay": false,
-    "result": {"reservationId": 10001, "reservationNo": "RSV-10001", "status": "CONFIRMED"}
+    "result": {"reservationId": "10001", "reservationNo": "RSV-10001", "status": "CONFIRMED"}
   },
   "requestId": "req_x"
 }

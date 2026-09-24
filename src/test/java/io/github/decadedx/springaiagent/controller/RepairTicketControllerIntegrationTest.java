@@ -118,7 +118,41 @@ class RepairTicketControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").isString())
                 .andExpect(jsonPath("$.data.items[0].equipmentInfo").value("投影仪"));
+    }
+
+    @Test
+    void shouldConfirmAndReplayRepairWithStringIds() throws Exception {
+        String token = login("student01");
+        MvcResult draftResult = mockMvc.perform(post("/api/repair-drafts")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"labId\":\"LAB-B402\",\"equipmentInfo\":\"GPU-03\","
+                                + "\"description\":\"无法启动\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String draftBody = draftResult.getResponse().getContentAsString();
+        String actionId = JsonPath.read(draftBody, "$.data.actionId");
+        String sessionId = JsonPath.read(draftBody, "$.data.sessionId");
+        String confirmBody = "{\"sessionId\":\"" + sessionId + "\"}";
+
+        mockMvc.perform(post("/api/actions/{actionId}/confirm", actionId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(confirmBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.idempotentReplay").value(false))
+                .andExpect(jsonPath("$.data.result.businessId").isString())
+                .andExpect(jsonPath("$.data.result.ticketId").isString());
+        mockMvc.perform(post("/api/actions/{actionId}/confirm", actionId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(confirmBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.idempotentReplay").value(true))
+                .andExpect(jsonPath("$.data.result.businessId").isString())
+                .andExpect(jsonPath("$.data.result.ticketId").isString());
     }
 
     private String login(String username) throws Exception {

@@ -57,6 +57,7 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.requestId").value("req-login-001"))
                 .andExpect(jsonPath("$.data.accessToken").value(notNullValue()))
                 .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.data.user.id").isString())
                 .andExpect(jsonPath("$.data.user.username").value("student01"))
                 .andExpect(jsonPath("$.data.user.role").value("STUDENT"))
                 .andExpect(jsonPath("$.data.passwordHash").doesNotExist());

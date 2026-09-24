@@ -20,7 +20,7 @@ export async function getSubmittedRepairTickets(): Promise<RepairTicket[]> {
   return (await request<Page<RepairTicket>>('/admin/repair-tickets?status=SUBMITTED&page=1&size=20')).items
 }
 
-export async function processRepairTicket(ticketId: number, resolutionNote: string): Promise<RepairTicket> {
+export async function processRepairTicket(ticketId: string, resolutionNote: string): Promise<RepairTicket> {
   return request<RepairTicket>(`/admin/repair-tickets/${ticketId}`, {
     method: 'PATCH',
     body: JSON.stringify({ status: 'PROCESSING', resolutionNote }),

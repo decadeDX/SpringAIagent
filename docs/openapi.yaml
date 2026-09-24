@@ -505,17 +505,17 @@ components:
       name: reservationId
       in: path
       required: true
-      schema: { type: integer, format: int64, minimum: 1 }
+      schema: { type: string, pattern: '^[0-9]+$', description: 持久化主键，以字符串传输以避免 JavaScript 精度丢失 }
     TicketId:
       name: ticketId
       in: path
       required: true
-      schema: { type: integer, format: int64, minimum: 1 }
+      schema: { type: string, pattern: '^[0-9]+$', description: 持久化主键，以字符串传输以避免 JavaScript 精度丢失 }
     DocumentVersionId:
       name: documentVersionId
       in: path
       required: true
-      schema: { type: integer, format: int64, minimum: 1 }
+      schema: { type: string, pattern: '^[0-9]+$', description: 持久化主键，以字符串传输以避免 JavaScript 精度丢失 }
     ActionId:
       name: actionId
       in: path
@@ -596,7 +596,7 @@ components:
       type: object
       required: [id, username, role, trainingStatus]
       properties:
-        id: { type: integer, format: int64 }
+        id: { type: string, description: 用户主键，以字符串传输以避免 JavaScript 精度丢失 }
         username: { type: string }
         role: { type: string, enum: [STUDENT, ADMIN] }
         trainingStatus: { type: string, enum: [PENDING, PASSED, FAILED] }
@@ -669,7 +669,7 @@ components:
       type: object
       required: [id, reservationNo, labId, startTime, endTime, participantCount, status]
       properties:
-        id: { type: integer, format: int64 }
+        id: { type: string, description: 预约主键，以字符串传输以避免 JavaScript 精度丢失 }
         reservationNo: { type: string, example: RSV-10001 }
         labId: { type: string }
         labName: { type: string }
@@ -718,7 +718,7 @@ components:
         actionType: { $ref: '#/components/schemas/ActionType' }
         sessionId: { type: string }
         expiresAt: { type: string, format: date-time }
-        payload: { type: object, additionalProperties: true }
+        payload: { type: object, additionalProperties: true, description: 取消预约草案中的 reservationId 以字符串传输 }
         notices: { type: array, items: { type: string } }
     ActionDraftResponse:
       allOf:
@@ -740,7 +740,7 @@ components:
         actionType: { $ref: '#/components/schemas/ActionType' }
         executionStatus: { $ref: '#/components/schemas/ActionExecutionStatus' }
         idempotentReplay: { type: boolean }
-        result: { type: object, additionalProperties: true }
+        result: { type: object, additionalProperties: { type: string }, description: 结果中的 businessId、reservationId 和 ticketId 均以字符串传输 }
     ActionExecutionResponse:
       allOf:
         - $ref: '#/components/schemas/SuccessEnvelope'
@@ -751,7 +751,7 @@ components:
       type: object
       required: [id, ticketNo, labId, equipmentInfo, description, safetyRisk, status, createdAt]
       properties:
-        id: { type: integer, format: int64 }
+        id: { type: string, description: 工单主键，以字符串传输以避免 JavaScript 精度丢失 }
         ticketNo: { type: string, example: TKT-10001 }
         labId: { type: string }
         equipmentInfo: { type: string }
@@ -918,7 +918,7 @@ components:
       type: object
       required: [id, requestId, toolName, durationMs, createdAt]
       properties:
-        id: { type: integer, format: int64 }
+        id: { type: string, description: 审计记录主键，以字符串传输以避免 JavaScript 精度丢失 }
         requestId: { type: string }
         sessionId: { type: [string, 'null'] }
         toolName: { type: string }

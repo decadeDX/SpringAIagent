@@ -5,7 +5,7 @@ export interface LoginResult {
   tokenType: 'Bearer'
   expiresAt: string
   user: {
-    id: number
+    id: string
     username: string
     role: 'STUDENT' | 'ADMIN'
     trainingStatus: 'PENDING' | 'PASSED' | 'FAILED'

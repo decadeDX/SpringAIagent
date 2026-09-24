@@ -31,12 +31,16 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 以 MySQL 为最终幂等事实执行草案，Redis 仅在首次确认时提供可信临时载荷。
  */
 @Service
 public class ActionConfirmationServiceImpl implements ActionConfirmationService {
+
+    /** 动作结果中必须以字符串公开的持久化主键字段。 */
+    private static final Set<String> RESULT_ID_FIELDS = Set.of("businessId", "reservationId", "ticketId");
 
     /** 动作执行记录访问入口。 */
     private final ActionExecutionMapper actionExecutionMapper;
@@ -148,7 +152,7 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
         }
 
         Map<String, Object> result = executeDomain(draft);
-        execution.setBusinessId(((Number) result.get("businessId")).longValue());
+        execution.setBusinessId(Long.parseLong((String) result.get("businessId")));
         execution.setResultSummary(writeJson(result));
         execution.setExecutionStatus(ActionExecutionStatus.SUCCEEDED);
         actionExecutionMapper.updateById(execution);
@@ -181,8 +185,8 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
      */
     private Map<String, Object> reservationResult(ReservationVO reservation) {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("businessId", reservation.id());
-        result.put("reservationId", reservation.id());
+        result.put("businessId", reservation.id().toString());
+        result.put("reservationId", reservation.id().toString());
         result.put("reservationNo", reservation.reservationNo());
         result.put("status", reservation.status().name());
         return result;
@@ -196,8 +200,8 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
      */
     private Map<String, Object> repairResult(RepairTicketVO ticket) {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("businessId", ticket.id());
-        result.put("ticketId", ticket.id());
+        result.put("businessId", ticket.id().toString());
+        result.put("ticketId", ticket.id().toString());
         result.put("ticketNo", ticket.ticketNo());
         result.put("status", ticket.status().name());
         return result;
@@ -281,11 +285,18 @@ public class ActionConfirmationServiceImpl implements ActionConfirmationService 
      * 读取已持久化成功结果。
      *
      * @param json 结果 JSON
-     * @return 不可变结果对象
+     * @return 已将历史数值主键规范化为字符串的不可变结果对象
      */
     private Map<String, Object> readMap(String json) {
         try {
-            return objectMapper.readValue(json, Map.class);
+            Map<String, Object> result = new LinkedHashMap<>(objectMapper.readValue(json, Map.class));
+            RESULT_ID_FIELDS.forEach(field -> {
+                Object value = result.get(field);
+                if (value instanceof Number number) {
+                    result.put(field, number.toString());
+                }
+            });
+            return Map.copyOf(result);
         } catch (Exception exception) {
             throw new IllegalStateException("动作结果无法读取", exception);
         }

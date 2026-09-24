@@ -12,7 +12,7 @@ export interface ActionExecution {
   actionType: ActionType
   executionStatus: 'SUCCEEDED'
   idempotentReplay: boolean
-  result: Record<string, unknown>
+  result: Record<string, string>
 }
 
 export interface ChatSession {
@@ -31,7 +31,7 @@ export interface ActionDraft {
 }
 
 export interface Reservation {
-  id: number
+  id: string
   reservationNo: string
   labId: string
   labName: string
@@ -42,7 +42,7 @@ export interface Reservation {
 }
 
 export interface RepairTicket {
-  id: number
+  id: string
   ticketNo: string
   labId: string
   equipmentInfo: string
