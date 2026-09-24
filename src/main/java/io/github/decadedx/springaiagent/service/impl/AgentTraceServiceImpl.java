@@ -24,6 +24,9 @@ import java.time.ZoneOffset;
 @Service
 public class AgentTraceServiceImpl implements AgentTraceService {
 
+    /** JSON 审计列中表示已移除原始工具参数的固定安全载荷。 */
+    private static final String REDACTED_ARGUMENTS = "{\"redacted\":true}";
+
     /** 审计数据访问入口。 */
     private final AgentTraceMapper agentTraceMapper;
 
@@ -51,7 +54,7 @@ public class AgentTraceServiceImpl implements AgentTraceService {
         trace.setSessionId(sessionId);
         trace.setUserId(CurrentUser.requireId());
         trace.setToolName(toolName);
-        trace.setRedactedArguments(sensitiveDataSanitizer.sanitizeAuditText(redactedArguments));
+        trace.setRedactedArguments(StringUtils.hasText(redactedArguments) ? REDACTED_ARGUMENTS : null);
         trace.setResultSummary(sensitiveDataSanitizer.sanitizeAuditText(resultSummary));
         trace.setDurationMs(Math.max(0, durationMs));
         trace.setErrorCode(errorCode);

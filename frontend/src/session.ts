@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import type { LoginResult } from './api/auth'
+import { clearAssistantState } from './assistantState'
 
 export const SESSION_STORAGE_KEY = 'authSession'
 
@@ -48,12 +49,14 @@ export function updateSession(result: LoginResult) {
 
 export function clearSession() {
   sessionStorage.removeItem(SESSION_STORAGE_KEY)
+  clearAssistantState()
   sessionExpired.value = false
   applySession(null)
 }
 
 export function invalidateSession() {
   sessionStorage.removeItem(SESSION_STORAGE_KEY)
+  clearAssistantState()
   sessionExpired.value = true
   applySession(null)
 }

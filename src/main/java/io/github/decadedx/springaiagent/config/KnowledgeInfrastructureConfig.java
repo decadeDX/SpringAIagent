@@ -11,14 +11,20 @@ import io.github.decadedx.springaiagent.service.impl.UnavailableRagChatClient;
 import io.github.decadedx.springaiagent.service.impl.SpringAiAgentModelClient;
 import io.github.decadedx.springaiagent.service.impl.UnavailableAgentModelClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.redis.RedisVectorStore;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import redis.clients.jedis.DefaultJedisClientConfig;
+import redis.clients.jedis.RedisClient;
 
 import java.util.concurrent.Executor;
 
@@ -47,6 +53,29 @@ public class KnowledgeInfrastructureConfig {
     }
 
     /**
+     * 创建支持按文档版本过滤的 Redis Stack 向量存储。
+     *
+     * @param embeddingModel 文本嵌入模型
+     * @param connectionFactory 复用应用 Redis 连接配置的 Jedis 工厂
+     * @param indexName Redis Search 索引名称
+     * @param prefix 向量 JSON 记录的 Redis Key 前缀
+     * @return 注册 documentId TAG 元数据字段的向量存储
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "knowledge", name = "rag-enabled", havingValue = "true")
+    public VectorStore knowledgeRedisVectorStore(EmbeddingModel embeddingModel,
+                                                  JedisConnectionFactory connectionFactory,
+                                                  @Value("${spring.ai.vectorstore.redis.index-name}") String indexName,
+                                                  @Value("${spring.ai.vectorstore.redis.prefix}") String prefix) {
+        return RedisVectorStore.builder(redisClient(connectionFactory), embeddingModel)
+                .indexName(indexName)
+                .prefix(prefix)
+                .metadataFields(RedisVectorStore.MetadataField.tag("documentId"))
+                .initializeSchema(true)
+                .build();
+    }
+
+    /**
      * 创建 Redis Stack 向量适配器。
      *
      * @param vectorStore Spring AI 配置的 Redis 向量存储
@@ -56,6 +85,25 @@ public class KnowledgeInfrastructureConfig {
     @ConditionalOnProperty(prefix = "knowledge", name = "rag-enabled", havingValue = "true")
     public KnowledgeVectorStore redisKnowledgeVectorStore(VectorStore vectorStore, ApplicationMetrics applicationMetrics) {
         return new RedisKnowledgeVectorStore(vectorStore, applicationMetrics);
+    }
+
+    /**
+     * 将 Spring Data Redis 的连接参数转换为 Spring AI Redis Vector Store 所需的 Jedis 客户端。
+     *
+     * @param connectionFactory 已注入密码、超时和 TLS 配置的连接工厂
+     * @return 与常规 Redis 访问使用相同连接参数的 Jedis 客户端
+     */
+    private RedisClient redisClient(JedisConnectionFactory connectionFactory) {
+        DefaultJedisClientConfig clientConfig = DefaultJedisClientConfig.builder()
+                .ssl(connectionFactory.isUseSsl())
+                .clientName(connectionFactory.getClientName())
+                .timeoutMillis(connectionFactory.getTimeout())
+                .password(connectionFactory.getPassword())
+                .build();
+        return RedisClient.builder()
+                .hostAndPort(connectionFactory.getHostName(), connectionFactory.getPort())
+                .clientConfig(clientConfig)
+                .build();
     }
 
     /**

@@ -1,28 +1,19 @@
 <script setup lang="ts">
+defineOptions({ name: 'AssistantPage' })
+
 import { onMounted, ref } from 'vue'
 import { confirmAction } from '../api/action'
 import { createChatSession, sendChatMessage } from '../api/chat'
-import type { ActionDraft, Citation } from '../types/api'
-
-interface DisplayMessage {
-  role: 'user' | 'assistant'
-  content: string
-  citations?: Citation[]
-}
+import { chatSessionId, confirmed, draft, messages } from '../assistantState'
 
 const input = ref('我们 3 个人下周二 14 点到 16 点需要 GPU 实验室，帮我安排一下。')
-const messages = ref<DisplayMessage[]>([
-  { role: 'assistant', content: '你好，我可以帮你查询实验室规定、可用时段、预约和报修。涉及预约、取消或报修时，我会先生成草案，等待你在页面上明确确认。' },
-])
-const draft = ref<ActionDraft>()
 const sending = ref(false)
-const confirmed = ref(false)
-const sessionId = ref('')
 const errorMessage = ref('')
 
 onMounted(async () => {
+  if (chatSessionId.value) return
   try {
-    sessionId.value = (await createChatSession()).sessionId
+    chatSessionId.value = (await createChatSession()).sessionId
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '无法创建聊天会话'
   }
@@ -34,13 +25,13 @@ function formatTime(value: unknown) {
 
 async function send() {
   const content = input.value.trim()
-  if (!content || sending.value || !sessionId.value) return
+  if (!content || sending.value || !chatSessionId.value) return
   messages.value.push({ role: 'user', content })
   input.value = ''
   sending.value = true
   errorMessage.value = ''
   try {
-    const response = await sendChatMessage(sessionId.value, content)
+    const response = await sendChatMessage(chatSessionId.value, content)
     messages.value.push({ role: 'assistant', content: response.answer, citations: response.citations })
     draft.value = response.draft
     confirmed.value = false

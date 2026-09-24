@@ -2,7 +2,9 @@ package io.github.decadedx.springaiagent.service.impl;
 
 import io.github.decadedx.springaiagent.dto.KnowledgeQuestionDTO;
 import io.github.decadedx.springaiagent.common.ApplicationMetrics;
+import io.github.decadedx.springaiagent.common.ApiCode;
 import io.github.decadedx.springaiagent.enums.UserRole;
+import io.github.decadedx.springaiagent.exception.BusinessException;
 import io.github.decadedx.springaiagent.mapper.KnowledgeDocumentMapper;
 import io.github.decadedx.springaiagent.security.AuthenticatedUser;
 import io.github.decadedx.springaiagent.service.CitationValidator;
@@ -13,6 +15,7 @@ import io.github.decadedx.springaiagent.service.RagChatClient;
 import io.github.decadedx.springaiagent.vo.RagAnswerVO;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.mockito.ArgumentCaptor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -25,6 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -80,6 +84,21 @@ class RagServiceImplTest {
         assertThat(answer.answer()).isEqualTo("当前知识库中没有足够信息");
         assertThat(answer.citations()).isEmpty();
         verify(answerCache).put(any(), any(RagAnswerVO.class));
+    }
+
+    @Test
+    void shouldReturnDependencyUnavailableWhenPublishedDocumentsRequireAnUnavailableVectorStore() {
+        KnowledgeDocumentMapper documentMapper = mock(KnowledgeDocumentMapper.class);
+        when(documentMapper.selectPublishedSucceededIds()).thenReturn(List.of(100L));
+        RagServiceImpl service = service(documentMapper, new UnavailableKnowledgeVectorStore(),
+                mock(RagChatClient.class), mock(KnowledgeAnswerCache.class));
+        authenticate();
+
+        assertThatThrownBy(() -> service.ask(new KnowledgeQuestionDTO("实验室预约需要什么条件？")))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                    assertThat(exception.getCode()).isEqualTo(ApiCode.DEPENDENCY_UNAVAILABLE);
+                });
     }
 
     private RagServiceImpl service(KnowledgeDocumentMapper documentMapper, KnowledgeVectorStore vectorStore,

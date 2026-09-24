@@ -1,4 +1,10 @@
 spring:
+  config:
+    # 本地从 IDE 启动时也读取 Docker Compose 使用的私有环境变量；生产环境仍可仅通过系统环境变量覆盖。
+    import: optional:file:deploy/.env[.properties]
+  autoconfigure:
+    # 默认 Redis Vector Store 不会声明 documentId 过滤字段，改由 KnowledgeInfrastructureConfig 显式创建。
+    exclude: org.springframework.ai.vectorstore.redis.autoconfigure.RedisVectorStoreAutoConfiguration
   application:
     name: SpringAIagent
   jackson:

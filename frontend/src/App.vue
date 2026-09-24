@@ -117,7 +117,11 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </header>
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <KeepAlive include="AssistantPage">
+          <component :is="Component" />
+        </KeepAlive>
+      </RouterView>
     </main>
   </div>
 </template>
