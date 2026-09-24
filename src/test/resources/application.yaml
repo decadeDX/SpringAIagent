@@ -5,6 +5,10 @@ security:
     ttl: PT2H
 
 spring:
+  jackson:
+    datatype:
+      datetime:
+        adjust-dates-to-context-time-zone: false
   autoconfigure:
     exclude: org.springframework.ai.vectorstore.redis.autoconfigure.RedisVectorStoreAutoConfiguration
   ai:

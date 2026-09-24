@@ -34,6 +34,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
 @Import({TestcontainersConfiguration.class, ReservationControllerIntegrationTest.FixedClockConfiguration.class})
 @SpringBootTest
@@ -80,6 +81,18 @@ class ReservationControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.total").value(0));
     }
 
+    @Test
+    void shouldCreateReservationDraftWhenRequestUsesShanghaiOffset() throws Exception {
+        mockMvc.perform(post("/api/reservation-drafts")
+                        .with(authentication(studentOneAuthentication()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"labId\":\"LAB-A301\",\"startTime\":\"2026-09-22T09:00:00+08:00\","
+                                + "\"endTime\":\"2026-09-22T10:00:00+08:00\",\"participantCount\":1}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.payload.startTime").value("2026-09-22T09:00:00+08:00"))
+                .andExpect(jsonPath("$.data.payload.endTime").value("2026-09-22T10:00:00+08:00"));
+    }
+
     private String login(String username) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -90,9 +103,12 @@ class ReservationControllerIntegrationTest {
     }
 
     private void authenticateStudentOne() {
+        SecurityContextHolder.getContext().setAuthentication(studentOneAuthentication());
+    }
+
+    private UsernamePasswordAuthenticationToken studentOneAuthentication() {
         AuthenticatedUser user = new AuthenticatedUser(1L, UserRole.STUDENT);
-        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(user, null,
-                List.of(new SimpleGrantedAuthority("ROLE_STUDENT"))));
+        return new UsernamePasswordAuthenticationToken(user, null, List.of(new SimpleGrantedAuthority("ROLE_STUDENT")));
     }
 
     @TestConfiguration

@@ -1,6 +1,10 @@
 spring:
   application:
     name: SpringAIagent
+  jackson:
+    datatype:
+      datetime:
+        adjust-dates-to-context-time-zone: false
   datasource:
     url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:lab_agent}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true
     username: ${DB_USERNAME}
