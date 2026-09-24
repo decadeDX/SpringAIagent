@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { confirmAction } from '../api/action'
 import { getLabAvailability, getLabs, prepareReservation } from '../api/reservation'
+import { trainingStatus } from '../session'
 import type { ActionDraft, Lab, LabAvailabilitySlot } from '../types/api'
 import './reservation-create.css'
 
@@ -91,6 +92,19 @@ function selectDuration(hours: number) {
   errorMessage.value = ''
 }
 
+function selectLab(lab: Lab) {
+  if (lab.status !== 'ACTIVE') return
+  if (requiresTraining(lab) && trainingStatus.value !== 'PASSED') {
+    errorMessage.value = `预约${lab.name}前需要通过安全培训。`
+    return
+  }
+  selectedLabId.value = lab.id
+}
+
+function requiresTraining(lab: Lab) {
+  return lab.id === 'LAB-B402' || lab.id === 'LAB-C205'
+}
+
 async function createDraft() {
   if (!selectedLab.value || !selectedStartTime.value || !selectedEndTime.value || !canUseDuration(duration.value)
     || participantCount.value < 1 || participantCount.value > selectedLab.value.capacity) {
@@ -169,15 +183,17 @@ function isWeekend(date: string) {
               :key="lab.id"
               type="button"
               class="lab-choice"
-              :class="{ selected: selectedLabId === lab.id, unavailable: lab.status !== 'ACTIVE' }"
+              :class="{ selected: selectedLabId === lab.id, unavailable: lab.status !== 'ACTIVE' || (requiresTraining(lab) && trainingStatus !== 'PASSED') }"
               :disabled="lab.status !== 'ACTIVE'"
+              :aria-disabled="lab.status !== 'ACTIVE' || (requiresTraining(lab) && trainingStatus !== 'PASSED')"
               :aria-pressed="selectedLabId === lab.id"
-              @click="selectedLabId = lab.id"
+              @click="selectLab(lab)"
             >
               <strong>{{ lab.name }}</strong>
               <span>{{ lab.id }} · 容量 {{ lab.capacity }} 人</span>
               <small>{{ lab.equipmentDescription }}</small>
               <em v-if="lab.status !== 'ACTIVE'">{{ lab.status === 'MAINTENANCE' ? '维护中，不可预约' : '已停用，不可预约' }}</em>
+              <em v-else-if="requiresTraining(lab) && trainingStatus !== 'PASSED'">需通过安全培训</em>
               <em v-else>{{ lab.openTime }}–{{ lab.closeTime }}</em>
             </button>
           </div>
