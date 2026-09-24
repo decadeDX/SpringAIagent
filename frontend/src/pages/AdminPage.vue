@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import './AdminPage.css'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import {
   disableKnowledgeDocument,
@@ -174,14 +175,14 @@ onBeforeUnmount(stopDocumentPolling)
 
     <section class="card">
       <h2>待处理工单</h2>
-      <template v-if="tickets.length">
+      <div v-if="tickets.length" class="ticket-list-viewport">
         <article v-for="ticket in tickets" :key="ticket.id" class="ticket">
           <div><strong>{{ ticket.ticketNo }}</strong><span>{{ ticket.labId }} · {{ ticket.equipmentInfo }}</span></div>
           <p>{{ ticket.description }}</p>
           <textarea v-model="resolutionNote" rows="3" placeholder="填写处理说明后更新状态" />
           <button class="primary-button" @click="processTicket(ticket)">更新为处理中</button>
         </article>
-      </template>
+      </div>
       <p v-else class="empty-state">暂无待处理工单</p>
     </section>
   </div>
