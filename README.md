@@ -128,5 +128,5 @@ pwsh -File tests/concurrency/run-reservation-confirm.ps1 -BaseUrl http://localho
 - [并发结果](tests/concurrency/results/)
 - [实验报告](docs/report.md)
 
-RAG 的固定 30 题题集位于 [tests/rag-evaluation/questions.json](tests/rag-evaluation/questions.json)。真实模型评测需要先导入并发布知识文档，再显式设置 `RUN_RAG_E2E=true`；当前完整 A/B 逐题结果尚未完成，不能将未生成的指标当作验收结果。
+RAG 的固定 30 题题集位于 [tests/rag-evaluation/questions.json](tests/rag-evaluation/questions.json)。真实模型评测需要先导入并发布知识文档，再显式设置 `RUN_RAG_E2E=true`；
 
