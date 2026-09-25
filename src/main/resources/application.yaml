@@ -65,6 +65,12 @@ knowledge:
   rag-enabled: ${KNOWLEDGE_RAG_ENABLED:false}
   storage-path: ${KNOWLEDGE_STORAGE_PATH:knowledge/uploads}
   cache-ttl: PT10M
+  rag:
+    chunk-size: ${KNOWLEDGE_RAG_CHUNK_SIZE:700}
+    chunk-overlap: ${KNOWLEDGE_RAG_CHUNK_OVERLAP:100}
+    min-boundary-chunk-size: ${KNOWLEDGE_RAG_MIN_BOUNDARY_CHUNK_SIZE:600}
+    top-k: ${KNOWLEDGE_RAG_TOP_K:5}
+    similarity-threshold: ${KNOWLEDGE_RAG_SIMILARITY_THRESHOLD:0.70}
 
 security:
   jwt:

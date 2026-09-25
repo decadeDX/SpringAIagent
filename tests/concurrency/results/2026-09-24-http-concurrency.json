@@ -1,0 +1,37 @@
+{
+  "executedAt": "2026-09-24T21:58:00+08:00",
+  "environment": {
+    "application": "本地 SpringAIagent 测试实例，HTTP 127.0.0.1:18080。",
+    "database": "临时 Docker MySQL 8.4（127.0.0.1:13307），从本地库只读复制；并发账号仅导入该临时库。",
+    "redis": "临时 Docker Redis Stack（127.0.0.1:16379）。",
+    "localDatabaseMutation": false
+  },
+  "command": "pwsh -File tests/concurrency/run-reservation-confirm.ps1 -BaseUrl http://127.0.0.1:18080",
+  "target": { "labId": "LAB-B402", "shanghai": "2026-09-25T14:00:00+08:00 — 2026-09-25T16:00:00+08:00", "utc": "2026-09-25 06:00:00 — 2026-09-25 08:00:00" },
+  "responses": [
+    { "username": "concurrency01", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency02", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency03", "httpStatus": 200, "code": 200 },
+    { "username": "concurrency04", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency05", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency06", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency07", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency08", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency09", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency10", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency11", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency12", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency13", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency14", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency15", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency16", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency17", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency18", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency19", "httpStatus": 409, "code": 40901 },
+    { "username": "concurrency20", "httpStatus": 409, "code": 40901 }
+  ],
+  "summary": { "success": 1, "reservationConflict": 19, "total": 20, "status": "PASS" },
+  "consistencyQuery": { "confirmedReservationCount": 1, "slotCount": 2, "distinctSlotCount": 2, "reservationReferenceCount": 1, "orphanSlotCount": 0, "status": "PASS" },
+  "deadlockLoserDataAccessException": "未出现",
+  "scriptChange": "确认线程通过同一 UTC 起始时刻并发发起请求，替代无法跨 ThreadJob 共享的 CountdownEvent 屏障。"
+}

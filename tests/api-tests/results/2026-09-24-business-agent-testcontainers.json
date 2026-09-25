@@ -1,0 +1,17 @@
+{
+  "executedAt": "2026-09-24T21:36:35+08:00",
+  "environment": "项目原有 Spring Boot 测试配置；MySQL 8.4 与 Redis 由 Testcontainers 隔离提供；未传入 RAG A/B 参数。",
+  "command": ".\\mvnw.cmd test -Dtest=ReservationControllerIntegrationTest,RepairTicketControllerIntegrationTest,RepairTicketServiceIntegrationTest,ActionConfirmationConcurrencyIntegrationTest,ActionConfirmationServiceImplTest,AgentOrchestrationServiceImplTest,AgentTraceServiceImplTest",
+  "summary": { "tests": 17, "failures": 0, "errors": 0, "skipped": 0, "status": "PASS" },
+  "testClasses": [
+    { "name": "ReservationControllerIntegrationTest", "tests": 3, "status": "PASS", "evidence": ["草案创建", "本人预约列表隔离", "确认后重放"] },
+    { "name": "RepairTicketControllerIntegrationTest", "tests": 4, "status": "PASS", "evidence": ["工单归属隔离", "管理员处理权限", "确认与重放"] },
+    { "name": "RepairTicketServiceIntegrationTest", "tests": 4, "status": "PASS", "evidence": ["高风险报修 safetyRisk", "工单状态流转", "学生隔离"] },
+    { "name": "ActionConfirmationConcurrencyIntegrationTest", "tests": 3, "status": "PASS", "evidence": ["20 用户同一时段", "同用户预约上限", "同 actionId 五次并发重放"] },
+    { "name": "ActionConfirmationServiceImplTest", "tests": 1, "status": "PASS", "evidence": ["旧数值 ID 的幂等重放归一化"] },
+    { "name": "AgentOrchestrationServiceImplTest", "tests": 1, "status": "PASS", "evidence": ["未调用工具时不得伪造数据库故障"] },
+    { "name": "AgentTraceServiceImplTest", "tests": 1, "status": "PASS", "evidence": ["trace 参数 JSON 脱敏持久化"] }
+  ],
+  "agentRealToolCalling": { "status": "NOT_EXECUTED", "reason": "本次已运行的 Agent 测试使用 mock AgentModelClient；尚无真实模型多轮工具调用的可保存 trace。" },
+  "rawEvidence": "target/surefire-reports/TEST-*.xml；该目录为构建产物，未复制敏感运行环境配置。"
+}
