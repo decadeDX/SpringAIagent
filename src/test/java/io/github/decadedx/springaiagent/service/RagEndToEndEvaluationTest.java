@@ -161,7 +161,7 @@ class RagEndToEndEvaluationTest {
     /** 上传一篇项目真实知识文档。 */
     private KnowledgeDocumentVO upload(SourceDocument document) throws Exception {
         return knowledgeService.upload(new KnowledgeDocumentUploadDTO(new MockMultipartFile("file", document.fileName(), "text/markdown",
-                Files.readAllBytes(Path.of("docs", "knowledge-base", document.fileName()))), document.logicalCode(), document.title(),
+                Files.readAllBytes(Path.of("knowledge", "knowledge-base", document.fileName()))), document.logicalCode(), document.title(),
                 document.version(), OffsetDateTime.parse("2026-09-21T09:00:00+08:00"), List.of()));
     }
 

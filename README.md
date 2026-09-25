@@ -96,7 +96,7 @@ docs/                   架构、接口、报告及模块设计材料
 - `indexStatus=FAILED`：查看 `indexFailureReason`；
 - 只有索引成功的版本才能调用 `POST /api/admin/knowledge/documents/{id}/publish` 发布；发布新版本会停用同一逻辑文档的旧版本。
 
-原始六篇课程知识文档目前位于本机 `docs/knowledge-base/`。该目录被 `.gitignore` 排除，提交仓库或压缩包前必须将原始资料及旧版本测试样例放入可交付目录并确认已包含；不要把真实 API Key、Redis 数据或用户上传文件一并提交。
+原始六篇课程知识文档目前位于本机 `knowledge/knowledge-base`。该目录被 `.gitignore` 排除，提交仓库或压缩包前必须将原始资料及旧版本测试样例放入可交付目录并确认已包含；不要把真实 API Key、Redis 数据或用户上传文件一并提交。
 
 ## 一次预约示例
 

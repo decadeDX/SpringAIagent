@@ -49,4 +49,4 @@ pwsh -File tests/concurrency/run-reservation-confirm.ps1 -BaseUrl http://localho
 ## 5. 已有证据
 
 - 已执行的 Testcontainers、真实 Agent 与 HTTP 并发证据见 [report.md](report.md)、`tests/api-tests/results/` 和 `tests/concurrency/results/`。
-- 演示前确认原始知识文档和旧版本样例被放入最终压缩包；当前 `docs/knowledge-base/` 被 Git 忽略。
+- 演示前确认原始知识文档和旧版本样例被放入最终压缩包；当前 `../knowledge/knowledge-base` 被 Git 忽略。
