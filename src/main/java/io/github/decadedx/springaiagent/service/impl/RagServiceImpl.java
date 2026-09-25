@@ -17,6 +17,9 @@ import io.github.decadedx.springaiagent.vo.KnowledgeCitationVO;
 import io.github.decadedx.springaiagent.vo.RagAnswerVO;
 import io.github.decadedx.springaiagent.vo.RagRetrievalVO;
 import org.springframework.http.HttpStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import tools.jackson.core.JacksonException;
@@ -35,11 +38,16 @@ import java.util.concurrent.TimeoutException;
 @Service
 public class RagServiceImpl implements RagService {
 
+    /** 记录外部向量库或模型依赖的失败原因，客户端仍只接收统一业务错误。 */
+    private static final Logger LOGGER = LoggerFactory.getLogger(RagServiceImpl.class);
+
     /** 每次向量检索最多返回的分块数量。 */
-    private static final int TOP_K = 5;
+    @Value("${knowledge.rag.top-k:5}")
+    private int topK = 5;
 
     /** 低于该相似度的向量结果不能作为回答依据。 */
-    private static final double SIMILARITY_THRESHOLD = 0.70D;
+    @Value("${knowledge.rag.similarity-threshold:0.70}")
+    private double similarityThreshold = 0.70D;
 
     /** 无可靠知识依据时唯一允许返回的固定回答。 */
     private static final String INSUFFICIENT_KNOWLEDGE_ANSWER = "当前知识库中没有足够信息";
@@ -104,7 +112,7 @@ public class RagServiceImpl implements RagService {
             if (cached.isPresent()) {
                 RagAnswerVO answer = cached.get();
                 return new RagAnswerVO(answer.answer(), answer.citations(),
-                        new RagRetrievalVO(TOP_K, answer.retrieval().hitCount(), elapsedMillis(startedAt)));
+                        new RagRetrievalVO(topK, answer.retrieval().hitCount(), elapsedMillis(startedAt)));
             }
 
             List<Long> documentIds = knowledgeDocumentMapper.selectPublishedSucceededIds();
@@ -112,7 +120,7 @@ public class RagServiceImpl implements RagService {
                 return refusal(elapsedMillis(startedAt), 0);
             }
             List<KnowledgeVectorDocument> matches = knowledgeVectorStore.search(questionDTO.question(), documentIds,
-                    TOP_K, SIMILARITY_THRESHOLD);
+                    topK, similarityThreshold);
             long retrievalMs = elapsedMillis(startedAt);
             if (matches.isEmpty()) {
                 RagAnswerVO answer = refusal(retrievalMs, 0);
@@ -134,7 +142,7 @@ public class RagServiceImpl implements RagService {
                 return answer;
             }
             RagAnswerVO answer = new RagAnswerVO(modelResponse.answer().trim(), citations.get(),
-                    new RagRetrievalVO(TOP_K, candidates.size(), retrievalMs));
+                    new RagRetrievalVO(topK, candidates.size(), retrievalMs));
             knowledgeAnswerCache.put(questionDTO.question(), answer);
             return answer;
         } catch (BusinessException exception) {
@@ -207,7 +215,7 @@ public class RagServiceImpl implements RagService {
     private RagAnswerVO refusal(long retrievalMs, int hitCount) {
         applicationMetrics.ragInsufficientEvidence();
         return new RagAnswerVO(INSUFFICIENT_KNOWLEDGE_ANSWER, List.of(),
-                new RagRetrievalVO(TOP_K, hitCount, retrievalMs));
+                new RagRetrievalVO(topK, hitCount, retrievalMs));
     }
 
     /**
@@ -217,6 +225,7 @@ public class RagServiceImpl implements RagService {
      * @return 统一业务异常
      */
     private BusinessException dependencyFailure(Exception exception) {
+        LOGGER.warn("RAG external dependency invocation failed", exception);
         if (isTimeout(exception)) {
             return new BusinessException(HttpStatus.GATEWAY_TIMEOUT, ApiCode.DEPENDENCY_TIMEOUT,
                     "知识库服务响应超时，请稍后重试");

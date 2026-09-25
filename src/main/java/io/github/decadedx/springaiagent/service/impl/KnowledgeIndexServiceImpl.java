@@ -11,6 +11,7 @@ import io.github.decadedx.springaiagent.service.KnowledgeIndexRequestedEvent;
 import io.github.decadedx.springaiagent.service.KnowledgeVectorDocument;
 import io.github.decadedx.springaiagent.service.KnowledgeVectorStore;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,13 +31,16 @@ import java.util.Map;
 public class KnowledgeIndexServiceImpl implements KnowledgeIndexService {
 
     /** 单块正文最大字符数。 */
-    private static final int CHUNK_SIZE = 700;
+    @Value("${knowledge.rag.chunk-size:700}")
+    private int chunkSize = 700;
 
     /** 相邻分块间保留的字符重叠数。 */
-    private static final int CHUNK_OVERLAP = 100;
+    @Value("${knowledge.rag.chunk-overlap:100}")
+    private int chunkOverlap = 100;
 
     /** 为保留自然段边界而允许提前结束的最小分块长度。 */
-    private static final int MIN_BOUNDARY_CHUNK_SIZE = 600;
+    @Value("${knowledge.rag.min-boundary-chunk-size:600}")
+    private int minBoundaryChunkSize = 600;
 
     /** 文档版本元数据访问入口。 */
     private final KnowledgeDocumentMapper knowledgeDocumentMapper;
@@ -140,9 +144,9 @@ public class KnowledgeIndexServiceImpl implements KnowledgeIndexService {
         int start = 0;
         int sequenceNo = 1;
         while (start < content.length()) {
-            int end = Math.min(start + CHUNK_SIZE, content.length());
+            int end = Math.min(start + chunkSize, content.length());
             if (end < content.length()) {
-                int boundary = lastBoundary(content, start + MIN_BOUNDARY_CHUNK_SIZE, end);
+                int boundary = lastBoundary(content, start + minBoundaryChunkSize, end);
                 if (boundary > start) {
                     end = boundary;
                 }
@@ -163,7 +167,7 @@ public class KnowledgeIndexServiceImpl implements KnowledgeIndexService {
             if (end >= content.length()) {
                 break;
             }
-            start = Math.max(end - CHUNK_OVERLAP, start + 1);
+            start = Math.max(end - chunkOverlap, start + 1);
         }
         if (chunks.isEmpty()) {
             throw new IllegalArgumentException("知识源文件不包含可索引正文");

@@ -40,13 +40,13 @@ $drafts = foreach ($number in 1..20) {
     [pscustomobject]@{ Username = $username; Token = $token; ActionId = $draft.Json.data.actionId; SessionId = $draft.Json.data.sessionId }
 }
 
-$ready = [System.Threading.CountdownEvent]::new($drafts.Count)
-$start = [System.Threading.ManualResetEventSlim]::new($false)
+$startAt = [DateTimeOffset]::UtcNow.AddSeconds(5)
 $jobs = foreach ($draft in $drafts) {
-    Start-ThreadJob -ArgumentList $draft, $BaseUrl, $ready, $start -ScriptBlock {
-        param($draft, $baseUrl, $ready, $start)
-        $ready.Signal()
-        $start.Wait()
+    Start-ThreadJob -ArgumentList $draft, $BaseUrl, $startAt -ScriptBlock {
+        param($draft, $baseUrl, $startAt)
+        while ([DateTimeOffset]::UtcNow -lt $startAt) {
+            Start-Sleep -Milliseconds 10
+        }
         $body = @{ sessionId = $draft.SessionId } | ConvertTo-Json -Compress
         try {
             $response = Invoke-WebRequest -Method Post -Uri "$baseUrl/api/actions/$($draft.ActionId)/confirm" -Headers @{ Accept = 'application/json'; Authorization = "Bearer $($draft.Token)" } -ContentType 'application/json' -Body $body -SkipHttpErrorCheck
@@ -58,8 +58,6 @@ $jobs = foreach ($draft in $drafts) {
     }
 }
 
-$ready.Wait()
-$start.Set()
 $results = $jobs | Receive-Job -Wait -AutoRemoveJob | Sort-Object Username
 $successes = @($results | Where-Object { $_.HttpStatus -eq 200 -and $_.Code -eq 200 })
 $conflicts = @($results | Where-Object { $_.HttpStatus -eq 409 -and $_.Code -eq 40901 })
